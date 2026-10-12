@@ -83,9 +83,9 @@ public class Plugin : IDalamudPlugin {
     GC.SuppressFinalize(this);
   }
   private void OnFrameworkUpdate(IFramework framework) {
-    if (Svc.ClientState.LocalPlayer is not null) {
+    if (Svc.Objects.LocalPlayer is not null) {
       //Task.Run(() => {
-      if (Svc.ClientState.LocalPlayer is IPlayerCharacter player) {
+      if (Svc.Objects.LocalPlayer is IPlayerCharacter player) {
         var temp = new PlayerID(player);
         if (System.CachedCurrentPlayerId != temp) {
           System.CachedCurrentPlayerId = temp;
@@ -100,7 +100,7 @@ public class Plugin : IDalamudPlugin {
   /// <summary>
   /// Checks the timers when necessary.
   /// </summary>
-  internal static void CheckTimers(ushort? territory = null) {
+  internal static void CheckTimers(uint? territory = null) {
     if (territory is null && System.IsLoggedIn) {
       territory = Svc.ClientState.TerritoryType;
     }
@@ -113,7 +113,7 @@ public class Plugin : IDalamudPlugin {
     HousingTimer.OnTerritoryChanged(territory.Value);
   }
 
-  internal static bool IsWarningToBeDisplayed(ushort? territory = null) {
+  internal static bool IsWarningToBeDisplayed(uint? territory = null) {
     if (territory is null && System.IsLoggedIn) {
       territory = Svc.ClientState.TerritoryType;
     }
@@ -138,8 +138,8 @@ public class Plugin : IDalamudPlugin {
   /// <summary>
   /// The function to call when changing instance. Checks timers after.
   /// </summary>
-  /// <param name="territoryId">The territory ID as a ushort.</param>
-  private void OnTerritoryChanged(ushort territoryId) {
+  /// <param name="territoryId">The territory ID.</param>
+  private void OnTerritoryChanged(uint territoryId) {
     Task.Run(() => {
       byte count = 0;
       while (!ECommons.GenericHelpers.IsScreenReady()) {

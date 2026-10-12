@@ -7,7 +7,7 @@ using ECommons.DalamudServices;
 
 using FFXIVClientStructs.FFXIV.Common.Math;
 
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 using NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Configuration;
 using NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Handler;
@@ -84,7 +84,7 @@ public class WarningUI : Window, IDisposable {
   private bool DisplayText(string text) {
     var height = ImGui.CalcTextSize("A").Y;
     var padding = ImGui.GetStyle().WindowPadding.X;
-    var wrappedHeight = ImGui.CalcTextSize(text, 0, (this.Size?.X ?? 500f) - (padding * 2)).Y;
+    var wrappedHeight = ImGui.CalcTextSize(text, false, (this.Size?.X ?? 500f) - (padding * 2)).Y;
 
     if (WindowHeight != INITIAL_WINDOW_HEIGHT + (wrappedHeight - height)) {
       WindowHeight += wrappedHeight - height;

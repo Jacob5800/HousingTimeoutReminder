@@ -79,7 +79,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
   ///   <para>Is 0 if is not an apartment.</para>
   /// </param>
   /// <param name="isInside">Optional argument if the player is inside the house.</param>
-  private HousingManager(sbyte plot, sbyte ward, ushort district, short room = 0, bool? isInside = null)
+  private HousingManager(sbyte plot, sbyte ward, uint district, short room = 0, bool? isInside = null)
     : this(plot, ward,ConvertToDistrict(district), room, isInside) { }
 
   /// <summary>
@@ -92,7 +92,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
   /// </summary>
   /// <param name="territory">The ID for the territory the player is in.</param>
   /// <return>The district the player is in.</return>
-  public static District ConvertToDistrict(ushort territory) {
+  public static District ConvertToDistrict(uint territory) {
     return territory switch {
       345 or 346 or 347 or 386 or 424 or 610 => District.Goblet,
       282 or 283 or 284 or 384 or 423 or 608 => District.Mist,
@@ -108,7 +108,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
   /// </summary>
   /// <param name="territory"></param>
   /// <returns>An instanced <see cref="HousingManager" /> if at a housing plot, otherwise a <see cref="Blank" /> instance.</returns>
-  public static HousingManager? GetCurrentLocation(ushort territory) {
+  public static HousingManager? GetCurrentLocation(uint territory) {
     try {
       unsafe {
         var manager = CSHousingManager.Instance();

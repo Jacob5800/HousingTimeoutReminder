@@ -1,20 +1,53 @@
-name: Create Release and Update Repository
+name: Build and release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   release:
-    uses: thakyZ/MyDalamudPlugins/.github/workflows/reusable_create_release.yml@main
-    with:
-      internal_name: HousingTimeoutReminder
-      solution_name: HousingTimeoutReminder
-      build_configuration: Release
-      personal_plugin_repo: thakyZ/MyDalamudPlugins
-      personal_plugin_repo_branch: main
-    secrets: inherit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Dalamud API 15 SDK files
+        shell: pwsh
+        run: |
+          $dalamudDev = Join-Path $env:APPDATA 'XIVLauncher\addon\Hooks\dev'
+          New-Item -ItemType Directory -Path $dalamudDev -Force | Out-Null
+          Invoke-WebRequest -Uri 'https://goatcorp.github.io/dalamud-distrib/latest.zip' -OutFile 'dalamud-latest.zip'
+          Expand-Archive -LiteralPath 'dalamud-latest.zip' -DestinationPath $dalamudDev -Force
+
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $tagVersion = $env:GITHUB_REF_NAME -replace '^v', ''
+          [xml]$project = Get-Content 'HousingTimeoutReminder/HousingTimeoutReminder.csproj' -Raw
+          $projectVersion = $project.SelectSingleNode('/Project/PropertyGroup/Version').InnerText
+          if ($tagVersion -ne $projectVersion) { throw "Tag version $tagVersion must match project version $projectVersion." }
+
+      - name: Build plugin package
+        run: dotnet build .\HousingTimeoutReminder.sln --configuration Release -p:RestoreLockedMode=true
+
+      - name: Prepare release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: Copy-Item -LiteralPath 'bin/Release/HousingTimeoutReminder/latest.zip' -Destination 'HousingTimeoutReminder.zip' -Force
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: HousingTimeoutReminder.zip

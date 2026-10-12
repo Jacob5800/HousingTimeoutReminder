@@ -29,7 +29,7 @@ public static class HousingTimer {
   /// <param name="playerID">An player identification instance.</param>
   /// <param name="territory">The ID for the territory the player is in.</param>
   /// <return>Returns <see langword="true"/> if successful.</return>
-  public static bool CheckLocation(PlayerID playerID, ushort territory) {
+  public static bool CheckLocation(PlayerID playerID, uint territory) {
     try {
       var playerConfig = Config.GetPlayerConfig(playerID);
       var loc = HousingManager.GetCurrentLocation(territory);
@@ -71,8 +71,8 @@ public static class HousingTimer {
   /// <summary>
   /// The function to call when changing instance. Checks timers after.
   /// </summary>
-  /// <param name="territory">The territory ID as a ushort.</param>
-  public static void OnTerritoryChanged(ushort territory) {
+  /// <param name="territory">The territory ID.</param>
+  public static void OnTerritoryChanged(uint territory) {
     PlayerID? playerID = System.GetCurrentPlayerID();
 
     if (playerID is not null) {
@@ -96,7 +96,7 @@ public static class HousingTimer {
   /// <param name="territory">The territory id.</param>
   /// <returns><see langword="true"/> if successful and ready,
   /// otherwise <see langword="false"/>.</returns>
-  public static bool ManualCheck(PlayerID playerID, ushort territory) {
+  public static bool ManualCheck(PlayerID playerID, uint territory) {
     try {
       return CheckLocation(playerID, territory);
     } catch (OperationCanceledException operationCanceledException) {

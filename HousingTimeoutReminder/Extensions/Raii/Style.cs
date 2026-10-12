@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 // ReSharper disable once CheckNamespace
 namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Extensions;
@@ -49,8 +49,7 @@ public static partial class ImGuiRaii
         ImGuiStyleVar.TabRounding         => type != typeof(float),
         ImGuiStyleVar.ButtonTextAlign     => type != typeof(Vector2),
         ImGuiStyleVar.SelectableTextAlign => type != typeof(Vector2),
-        ImGuiStyleVar.DisabledAlpha       => type != typeof(bool),
-        ImGuiStyleVar.COUNT               => type != typeof(int),
+        ImGuiStyleVar.DisabledAlpha       => type != typeof(float),
         _                                 => throw new ArgumentOutOfRangeException(nameof(idx), idx, null),
       };
 

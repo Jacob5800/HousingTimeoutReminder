@@ -3,7 +3,7 @@ using System.Numerics;
 
 using Dalamud.Interface.Utility;
 
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Extensions;
 
@@ -36,7 +36,7 @@ public static partial class ImGuiRaii {
   public static void ColoredLabel(string label, string value, Func<string, Vector4> colorFn) {
     ImGui.Text(label);
     ImGui.SameLine();
-    ImGuiHelpers.SafeTextColoredWrapped(colorFn.Invoke(value), value);
+    ImGui.TextColoredWrapped(colorFn.Invoke(value), value);
   }
 
   public static Vector4 GetImGuiColor(ImGuiCol col) {

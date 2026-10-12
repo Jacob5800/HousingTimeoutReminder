@@ -9,7 +9,7 @@ using Dalamud.Interface.Windowing;
 
 using ECommons.DalamudServices;
 
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Configuration;
 using NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Extensions;
 using NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Handler;
@@ -187,7 +187,7 @@ public class SettingsUI : Window, IDisposable {
               ImGui.SameLine();
 
               using (var i = ImRaii.ItemWidth(100)) {
-                if (i.Success) {
+                if (i.Count > 0) {
                   using (var c = ImRaii.Combo($"##{type}District-{playerId}", DistrictEnumHelper.GetDescriptor(playerHousing.District))) {
                     if (c.Success) {
                       foreach ((string name, District district) in DistrictEnumHelper.GetDescriptors()) {
@@ -215,7 +215,7 @@ public class SettingsUI : Window, IDisposable {
               ImGui.Text("Ward");
               ImGui.SameLine();
               using (var i = ImRaii.ItemWidth(100)) {
-                if (i.Success) {
+                if (i.Count > 0) {
                   int ward = playerHousing.Ward;
 
                   // ReSharper disable once InvertIf
@@ -243,7 +243,7 @@ public class SettingsUI : Window, IDisposable {
                 ImGui.SameLine();
 
                 using (var i = ImRaii.ItemWidth(100)) {
-                  if (i.Success) {
+                  if (i.Count > 0) {
                     int plot = playerHousing.Plot;
                     // ReSharper disable once InvertIf
                     if (ImGuiRaii.InputIntMinMax($"##{type}Plot-{playerId}", ref plot, 1, 20, 1, PlotMax)) {
@@ -300,7 +300,7 @@ public class SettingsUI : Window, IDisposable {
         ImGui.Text("Days To Wait");
         ImGui.SameLine();
         using (var i = ImRaii.ItemWidth(100)) {
-          if (i.Success) {
+          if (i.Count > 0) {
             var daysToWait = (int)System.PluginConfig.DaysToWait;
 
             if (ImGuiRaii.InputIntMinMax("##GlobalDaysToWait", ref daysToWait, 1, 5, 1, 30)) {
