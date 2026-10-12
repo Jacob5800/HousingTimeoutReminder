@@ -138,6 +138,13 @@ public class SettingsUI : Window, IDisposable {
     try {
       if (!ImGui.CollapsingHeader(HousingTypeEnumHelper.GetDescriptor(type), ImGuiTreeNodeFlags.DefaultOpen)) return true;
       var property = playerConfig.GetOfType(type);
+      if (type == HousingType.FreeCompanyEstate) {
+        ImGui.TextWrapped(playerConfig.FcEstateAccess switch {
+          true => $"FC rank: {playerConfig.FcRankName}. Estate access allowed.",
+          false => $"FC rank: {playerConfig.FcRankName}. No estate access; FC reminders are ignored.",
+          _ => "FC estate permission unknown. Open the game's FC Members tab once to read your rank permissions.",
+        });
+      }
       if (property.IsValid) {
         ImGui.Text($"{DistrictEnumHelper.GetDescriptor(property.District)} - Ward {property.Ward}, Plot {property.Plot}");
         var (last, next) = CheckConsistency(playerConfig, type);

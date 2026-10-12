@@ -101,6 +101,7 @@ public class Plugin : IDalamudPlugin {
       nextHousingCheck = Environment.TickCount64 + 5000;
       try {
         Handler.HousingManager.DetectOwnedHousing();
+        FreeCompanyAccess.Refresh();
         CheckTimers();
       } catch (Exception exception) {
         Svc.Log.Error(exception, "Failed to detect owned housing.");

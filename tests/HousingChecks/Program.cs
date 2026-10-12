@@ -48,4 +48,15 @@ Check(!SameFc(new PlayerID("Main", "Character", 403), fcHouse), "FC estate on an
 Check(!SameFc(owner, new HousingPlot {District = District.Mist, Ward = 1, Plot = 11}), "Different FC plot matched");
 Check(!SameFc(owner, new HousingPlot {District = District.Mist, Ward = 2, Plot = 10}), "Different FC ward matched");
 Check(!SameFc(null, fcHouse), "Unknown FC owner matched");
-Console.WriteLine($"Passed {checks} housing-address and character-identity checks.");
+var accessType = typeof(HousingTimer).Assembly.GetType("NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Handler.FreeCompanyAccess")!;
+var accessMethod = accessType.GetMethod("MatchRankAccess", BindingFlags.Static | BindingFlags.NonPublic)!;
+bool? RankAccess(string[] names, uint[] flags, string[] fields) => (bool?)accessMethod.Invoke(null, [names, flags, fields, null]);
+Check(RankAccess(["Peanut", "Commander"], [1u, 0u], ["Peanut"]) == true, "Custom low-rank name with estate permission was denied");
+Check(RankAccess(["Leader", "Officer"], [1u, 0u], ["Officer"]) == false, "Officer rank without estate permission was allowed");
+Check(RankAccess(["Gardener"], [2u], ["Gardener"]) == false, "Estate-renaming permission mistaken for estate access");
+Check(RankAccess(["Gardener"], [3u], ["Gardener"]) == true, "Combined estate permissions lost access bit");
+Check(RankAccess(["Leader"], [1u], []) is null, "Missing member rank was treated as a permission decision");
+Check(RankAccess(["Leader", "Visitor"], [1u, 0u], ["Leader", "Visitor"]) is null, "Ambiguous member row assigned a rank");
+Check(RankAccess([""], [1u], [""]) is null, "Unloaded rank label accepted");
+Check(RankAccess(["Member"], [], ["Member"]) is null, "Missing permission table accepted");
+Console.WriteLine($"Passed {checks} housing-address, visit, identity, and FC-permission checks.");

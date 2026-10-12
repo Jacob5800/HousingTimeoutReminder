@@ -22,15 +22,14 @@ public class WarningUI : Window, IDisposable {
   /// The default window flags of the settings ui.
   /// </summary>
   private const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse |
-    ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoTitleBar |
-    ImGuiWindowFlags.NoMove;
+    ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 
   /// <summary>
   /// An instance of the <see cref="Pagination" /> to implement pages in the warning dialog.
   /// </summary>
   internal readonly Pagination Pagination = new();
 
-  private const float INITIAL_WINDOW_HEIGHT = 85f;
+  private const float INITIAL_WINDOW_HEIGHT = 130f;
 
   private float WindowHeight = INITIAL_WINDOW_HEIGHT;
 
@@ -43,8 +42,8 @@ public class WarningUI : Window, IDisposable {
   /// The default constructor.
   /// </summary>
   public WarningUI() : base(Name, WindowFlags) {
-    this.AllowPinning = true;
-    this.AllowClickthrough = true;
+    this.AllowPinning = false;
+    this.AllowClickthrough = false;
     this.Size = new Vector2(500f, INITIAL_WINDOW_HEIGHT) * ImGuiHelpers.GlobalScale;
     this.SizeCondition = ImGuiCond.Always;
   }
@@ -60,6 +59,36 @@ public class WarningUI : Window, IDisposable {
   /// Caching the old position when repositioning the locked window.
   /// </summary>
   private Vector2 _oldPostion = Vector2.Zero;
+  private bool positionInitialized;
+  private bool positionNeedsSaving;
+
+  public override void PreDraw() {
+    Flags = WindowFlags;
+    BgAlpha = 1f;
+    if (!positionInitialized) {
+      Position = Configuration.Position.ToVector2(System.PluginConfig.WarningPosition);
+      PositionCondition = ImGuiCond.Once;
+      positionInitialized = true;
+    }
+    ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(0.09f, 0.09f, 0.11f, 1f));
+    ImGui.PushStyleColor(ImGuiCol.TitleBg, new Vector4(0.12f, 0.12f, 0.15f, 1f));
+    ImGui.PushStyleColor(ImGuiCol.TitleBgActive, new Vector4(0.17f, 0.17f, 0.21f, 1f));
+  }
+
+  public override void PostDraw() => ImGui.PopStyleColor(3);
+
+  private void RememberPosition() {
+    var current = ImGui.GetWindowPos();
+    var saved = System.PluginConfig.WarningPosition;
+    if (current.X != saved.X || current.Y != saved.Y) {
+      System.PluginConfig.WarningPosition = Configuration.Position.FromVector2(current);
+      positionNeedsSaving = true;
+    }
+    if (positionNeedsSaving && !ImGui.IsMouseDown(ImGuiMouseButton.Left)) {
+      System.PluginConfig.Save();
+      positionNeedsSaving = false;
+    }
+  }
 
   // cSpell:ignore thicc
   /// <summary>
@@ -68,10 +97,10 @@ public class WarningUI : Window, IDisposable {
   /// </summary>
   public void DrawRepositioning() {
     Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse |
-            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
-            ImGuiWindowFlags.NoTitleBar;
+            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 
-    this.BgAlpha = 0.5f;
+    this.BgAlpha = 1f;
+    ImGui.TextWrapped("Drag this window by its title bar. Its position is saved automatically.");
 
     if (_oldPostion.Equals(ImGui.GetWindowPos())) {
       return;
@@ -84,11 +113,12 @@ public class WarningUI : Window, IDisposable {
   private bool DisplayText(string text) {
     var height = ImGui.CalcTextSize("A").Y;
     var padding = ImGui.GetStyle().WindowPadding.X;
-    var wrappedHeight = ImGui.CalcTextSize(text, false, (this.Size?.X ?? 500f) - (padding * 2)).Y;
+    var wrappedHeight = ImGui.CalcTextSize(text, false, ImGui.GetContentRegionAvail().X).Y;
 
-    if (WindowHeight != INITIAL_WINDOW_HEIGHT + (wrappedHeight - height)) {
-      WindowHeight = INITIAL_WINDOW_HEIGHT + (wrappedHeight - height);
-      this.Size = new Vector2(500f, WindowHeight) * ImGuiHelpers.GlobalScale;
+    var desiredHeight = wrappedHeight + ImGui.GetFrameHeightWithSpacing() * 3 + ImGui.GetStyle().WindowPadding.Y * 2;
+    if (WindowHeight != desiredHeight) {
+      WindowHeight = desiredHeight;
+      this.Size = new Vector2(500f * ImGuiHelpers.GlobalScale, WindowHeight);
     }
 
     ImGui.TextWrapped(text);
@@ -148,9 +178,8 @@ public class WarningUI : Window, IDisposable {
   /// <param name="playerConfig">An instance of a <see cref="PerPlayerConfig" />.</param>
   /// <returns><see langword="true"/> if successfully drawn otherwise <see langword="false"/>.</returns>
   public bool DrawWarning(HousingType type, PerPlayerConfig playerConfig) {
-    this.BgAlpha = 0.5f;
+    this.BgAlpha = 1f;
     Flags = WindowFlags;
-    Position = Configuration.Position.ToVector2(System.PluginConfig.WarningPosition);
     DisplayForPlayer(type, playerConfig);
     return false;
   }
@@ -171,6 +200,7 @@ public class WarningUI : Window, IDisposable {
   /// Code to be executed every time the window renders.
   /// </summary>
   public override void Draw() {
+    RememberPosition();
     if (System.PluginInstance.Repositioning) {
       this.DrawRepositioning();
     } else if (System.IsLoggedIn) {

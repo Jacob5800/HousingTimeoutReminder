@@ -47,6 +47,12 @@ public class PerPlayerConfig : IInterface {
   /// The player's Free Company estate location.
   /// </summary>
   public HousingPlot FreeCompanyEstate { get; set; } = new();
+  public ulong FreeCompanyId { get; set; }
+  public bool? FcEstateAccess { get; set; }
+  public string FcRankName { get; set; } = string.Empty;
+
+  [JsonIgnore]
+  public bool HasLateFcEstate => FcEstateAccess != false && FreeCompanyEstate.IsLate;
 
   /// <summary>
   /// The player's Private estate location.
@@ -57,7 +63,7 @@ public class PerPlayerConfig : IInterface {
   /// Gets a <see langword="bool" /> that determines if any of the enabled housing properties are late.
   /// </summary>
   [JsonIgnore]
-  public bool HasLateProperties => this.FreeCompanyEstate.IsLate || this.PrivateEstate.IsLate;
+  public bool HasLateProperties => this.HasLateFcEstate || this.PrivateEstate.IsLate;
 
   /// <summary>
   /// Checks if this is the current player config.

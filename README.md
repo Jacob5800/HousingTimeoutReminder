@@ -18,6 +18,10 @@ Apartments and FC private chambers are not tracked. Reminders use locally record
 
 An observed visit to your FC estate refreshes saved alts that share that exact FC estate on the same world. Personal-house visits remain character-specific.
 
+FC reminders use your rank's **Estate Hall Access** permission, irrespective of custom rank names. Open the game's **FC Members** tab once on each character so the plugin can read that character's row and the loaded rank definitions. A known denied permission suppresses FC reminders; unknown or ambiguous data does not silently hide a house. The cached decision applies to saved alts too. Reopen the Members tab after changing ranks or rank permissions to refresh it.
+
+The reminder window has an opaque background. Drag its title bar to move it; the position is saved when you release the mouse.
+
 ## Verification
 
 Release and Debug builds are checked with the API 15 SDK. Run `dotnet run --project tests/HousingChecks/HousingChecks.csproj --configuration Release` after a Release build to validate housing address decoding, character identity, and inside-only visit rules.

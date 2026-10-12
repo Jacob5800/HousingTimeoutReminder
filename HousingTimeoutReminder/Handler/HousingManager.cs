@@ -149,7 +149,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
       if (!TryDecodeOwnedHouse(raw, player.HomeWorld.RowId, type, out var district, out var ward, out var plot, out var room)) continue;
       detected++;
       var property = config.GetOfType(type);
-      if (property.IsValid && !refreshExisting) continue;
+      if (property.IsValid && !refreshExisting && type == HousingType.PrivateEstate) continue;
       if (property.District == district && property.Ward == ward && property.Plot == plot && property.Room == room) continue;
       var wasConfigured = property.IsValid;
       var hadAddress = property.District != District.Unknown || property.Ward != 0 || property.Plot != 0 || property.Room != 0;
@@ -159,6 +159,11 @@ public sealed class HousingManager: IEquatable<HousingManager> {
       property.Room = room;
       // An old property's visit must not carry over to a different address.
       if (hadAddress) property.LastVisit = 0;
+      if (type == HousingType.FreeCompanyEstate && hadAddress) {
+        config.FreeCompanyId = 0;
+        config.FcEstateAccess = null;
+        config.FcRankName = string.Empty;
+      }
       if (!wasConfigured) property.Enabled = true;
       if (property is WardProperty wardProperty) wardProperty.IsDismissed = false;
       changed = true;

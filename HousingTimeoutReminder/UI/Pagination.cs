@@ -59,7 +59,7 @@ public class Pagination {
   internal static HousingType[] GetValidSubPagesCount(PerPlayerConfig playerConfig) {
     return [..Internal()];
     IEnumerable<HousingType> Internal() {
-      if (playerConfig.FreeCompanyEstate.IsLate)
+      if (playerConfig.HasLateFcEstate)
         yield return HousingType.FreeCompanyEstate;
       if (playerConfig.PrivateEstate.IsLate)
         yield return HousingType.PrivateEstate;
