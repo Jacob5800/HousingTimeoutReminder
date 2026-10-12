@@ -14,6 +14,8 @@ The plugin reminds you to visit configured housing plots before the automatic de
 
 **Settings** controls how many days to wait before reminding you, and whether to show all saved characters. Automatic detection does not create a visit timestamp. A newly detected house says **Not recorded** until an inside visit is observed.
 
+Use `/house` or `/htimeout` to open the plugin. In **Settings**, **Enable FC estate reminders** is on by default. Turn it off to hide FC reminders and FC settings across all saved characters; personal-house reminders and saved addresses remain available.
+
 Apartments and FC private chambers are not tracked. Reminders use locally recorded visits rather than the server's demolition timer; previous visits made without this plugin, visits by other FC members, and server demolition suspensions are not automatically known. The in-game estate timer remains the authority.
 
 An observed visit to your FC estate refreshes saved alts that share that exact FC estate on the same world. Personal-house visits remain character-specific.

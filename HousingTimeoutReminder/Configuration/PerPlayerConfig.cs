@@ -52,7 +52,7 @@ public class PerPlayerConfig : IInterface {
   public string FcRankName { get; set; } = string.Empty;
 
   [JsonIgnore]
-  public bool HasLateFcEstate => FcEstateAccess != false && FreeCompanyEstate.IsLate;
+  public bool HasLateFcEstate => FreeCompanyAccess.ShouldShowReminder(System.PluginConfig.EnableFcReminders, FcEstateAccess, FreeCompanyEstate.IsLate);
 
   /// <summary>
   /// The player's Private estate location.

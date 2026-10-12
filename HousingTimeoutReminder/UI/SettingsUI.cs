@@ -209,7 +209,7 @@ public class SettingsUI : Window, IDisposable {
   /// <param name="indent">Indenting check to make the child object better formatted.</param>
   public void DrawUserTimeoutSettings(PerPlayerConfig playerConfig, float indent = 0f) {
     var playerId = playerConfig.DisplayName;
-    if (!DrawHousingDropDown(playerConfig, HousingType.FreeCompanyEstate, indent + ScaledIndent5)) {
+    if (System.PluginConfig.EnableFcReminders && !DrawHousingDropDown(playerConfig, HousingType.FreeCompanyEstate, indent + ScaledIndent5)) {
       ImGui.Text($"Failed to draw {HousingTypeEnumHelper.GetDescriptor(HousingType.FreeCompanyEstate).ToLower()} tab.");
     }
 
@@ -248,6 +248,13 @@ public class SettingsUI : Window, IDisposable {
         if (ImGui.Checkbox("Show reminders for all saved characters##GlobalShowAllPlayers", ref displayAllPlayers)) {
           System.PluginConfig.ShowAllPlayers = displayAllPlayers;
         }
+        var enableFc = System.PluginConfig.EnableFcReminders;
+        if (ImGui.Checkbox("Enable FC estate reminders", ref enableFc)) {
+          System.PluginConfig.EnableFcReminders = enableFc;
+          System.PluginConfig.Save();
+          System.WarningUI.Pagination.WrapPages();
+        }
+        ImGui.TextWrapped("Turn this off to hide FC reminders for every saved character. Personal-house reminders are unaffected.");
       }
     } catch (Exception ex) {
       Svc.Log.Error(ex, nameof(DrawGlobalTab));

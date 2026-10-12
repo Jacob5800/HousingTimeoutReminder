@@ -11,6 +11,7 @@ using NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Configuration;
 namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Handler;
 
 internal static class FreeCompanyAccess {
+  internal static bool ShouldShowReminder(bool enabled, bool? estateAccess, bool late) => enabled && estateAccess != false && late;
   internal static bool HasEstateAccess(uint housingPermissions) => (housingPermissions & 1u) != 0;
 
   internal static bool? MatchRankAccess(string[] rankNames, uint[] permissions, string[] memberFields, out string rankName) {

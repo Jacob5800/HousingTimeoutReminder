@@ -29,6 +29,8 @@ public class Plugin : IDalamudPlugin {
   /// The plugin's main command name.
   /// </summary>
   private const string CommandName = "/htimeout";
+  private const string CommandAlias = "/house";
+  private readonly bool aliasRegistered;
 
   /// <summary>
   /// Bool to test if repositioning the warning dialog.
@@ -50,6 +52,10 @@ public class Plugin : IDalamudPlugin {
     Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand) {
       HelpMessage = "The config menu for the housing timer reminder plugin."
     });
+    aliasRegistered = Svc.Commands.AddHandler(CommandAlias, new CommandInfo(OnCommand) {
+      HelpMessage = "Open Housing Timeout Reminder settings. Alias for /htimeout."
+    });
+    if (!aliasRegistered) Svc.Log.Warning("/house is already registered by another plugin. Use /htimeout instead.");
 
     Svc.PluginInterface.UiBuilder.Draw += DrawUI;
     Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
@@ -80,6 +86,7 @@ public class Plugin : IDalamudPlugin {
     Svc.Framework.Update -= OnFrameworkUpdate;
     Svc.ClientState.Logout -= OnLogout;
     Svc.Commands.RemoveHandler(CommandName);
+    if (aliasRegistered) Svc.Commands.RemoveHandler(CommandAlias);
     ECommons.ECommonsMain.Dispose();
     GC.SuppressFinalize(this);
   }
@@ -101,7 +108,7 @@ public class Plugin : IDalamudPlugin {
       nextHousingCheck = Environment.TickCount64 + 5000;
       try {
         Handler.HousingManager.DetectOwnedHousing();
-        FreeCompanyAccess.Refresh();
+        if (System.PluginConfig.EnableFcReminders) FreeCompanyAccess.Refresh();
         CheckTimers();
       } catch (Exception exception) {
         Svc.Log.Error(exception, "Failed to detect owned housing.");

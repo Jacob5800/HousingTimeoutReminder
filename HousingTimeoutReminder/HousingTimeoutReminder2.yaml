@@ -9,8 +9,6 @@ tags:
   - Utility
 icon_url: https://raw.githubusercontent.com/Jacob5800/HousingTimeoutReminder/main/HousingTimeoutReminder/images/icon.png
 changelog: |-
-  ### 1.0.5.1
-  - Make the reminder window movable and opaque, with its position saved after dragging.
-  - Skip FC reminders when the character's rank lacks Estate Hall Access, regardless of custom rank names.
-  - Show unknown FC permissions until the game's FC Members tab supplies the character's rank data.
-  - Refresh detected FC addresses when the FC estate changes.
+  ### 1.0.5.2
+  - Add /house as an alternative command to /htimeout.
+  - Add an Enable FC estate reminders setting, enabled by default. Turning it off hides FC reminders for all saved characters while keeping personal-house reminders active.

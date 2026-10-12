@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5.2
+
+- Add `/house` as an alternative to `/htimeout`.
+- Add an Enable FC estate reminders setting, enabled by default. Turning it off hides FC reminders and FC settings for all saved characters while preserving their saved housing details and personal-house reminders.
+
 ## 1.0.5.1
 
 - Make the reminder window draggable by its title bar and give it an opaque background. Save its position after dragging.

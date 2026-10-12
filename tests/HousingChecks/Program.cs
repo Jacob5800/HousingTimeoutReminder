@@ -60,3 +60,12 @@ Check(RankAccess(["Leader", "Visitor"], [1u, 0u], ["Leader", "Visitor"]) is null
 Check(RankAccess([""], [1u], [""]) is null, "Unloaded rank label accepted");
 Check(RankAccess(["Member"], [], ["Member"]) is null, "Missing permission table accepted");
 Console.WriteLine($"Passed {checks} housing-address, visit, identity, and FC-permission checks.");
+var showFc = accessType.GetMethod("ShouldShowReminder", BindingFlags.Static | BindingFlags.NonPublic)!;
+bool ShowsFc(bool enabled, bool? access, bool late) => (bool)showFc.Invoke(null, [enabled, access, late])!;
+Check(ShowsFc(true, true, true), "Enabled and allowed FC reminder was hidden");
+Check(ShowsFc(true, null, true), "Unknown permission silently hid an FC reminder");
+Check(!ShowsFc(true, false, true), "Denied FC access produced a reminder");
+Check(!ShowsFc(false, true, true), "Global FC opt-out did not hide a reminder");
+Check(!ShowsFc(false, null, true), "Unknown FC permission bypassed global opt-out");
+Check(!ShowsFc(true, true, false), "Up-to-date FC estate produced a reminder");
+Console.WriteLine($"Passed {checks} total checks, including global FC reminder settings.");
