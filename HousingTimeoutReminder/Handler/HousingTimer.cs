@@ -33,30 +33,26 @@ public static class HousingTimer {
     try {
       var playerConfig = Config.GetPlayerConfig(playerID);
       var loc = HousingManager.GetCurrentLocation(territory);
+      if (loc is null || !CanRecordVisit(System.GetCurrentPlayerID(), playerID, loc.IsInside, loc.IsApartment, loc.Room,
+          Svc.Objects.LocalPlayer?.CurrentWorld.RowId ?? 0, playerID.HomeWorld ?? 0)) return true;
 
-      if (loc?.IsApartment == true && playerConfig.Apartment.Enabled) {
-        var apartment = HousingManager.From(playerID, HousingType.Apartment);
-        if (apartment?.Equals(loc) == true) {
-          playerConfig.Apartment.LastVisit = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
-          Update();
-          return true;
-        }
-      }
-
-      if (playerConfig.PrivateEstate.Enabled) {
+      if (loc.Room == 0 && playerConfig.PrivateEstate.Enabled) {
         var privateEstate = HousingManager.From(playerID, HousingType.PrivateEstate);
         if (privateEstate?.Equals(loc) == true) {
-          playerConfig.PrivateEstate.LastVisit = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
-          Update();
+          if (RecordVisit(playerConfig.PrivateEstate)) Update();
           return true;
         }
       }
 
-      if (playerConfig.FreeCompanyEstate.Enabled) {
+      if (loc.Room == 0 && playerConfig.FreeCompanyEstate.Enabled) {
         var freeCompanyEstate = HousingManager.From(playerID, HousingType.FreeCompanyEstate);
         if (freeCompanyEstate?.Equals(loc) == true) {
-          playerConfig.FreeCompanyEstate.LastVisit = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
-          Update();
+          var changed = false;
+          foreach (var saved in System.PluginConfig.PlayerConfigs) {
+            if (IsSameFcEstate(playerID, saved.PlayerID, playerConfig.FreeCompanyEstate, saved.FreeCompanyEstate))
+              changed |= RecordVisit(saved.FreeCompanyEstate);
+          }
+          if (changed) Update();
           return true;
         }
       }
@@ -67,6 +63,22 @@ public static class HousingTimer {
 
     return true;
   }
+
+  private static bool RecordVisit(WardProperty property) {
+    var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    if (now - property.LastVisit < 60) return false;
+    property.LastVisit = now;
+    property.IsDismissed = false;
+    return true;
+  }
+
+  internal static bool IsSameFcEstate(PlayerID current, PlayerID? other, HousingPlot currentHouse, HousingPlot otherHouse) =>
+    current.HomeWorld is > 0 && current.HomeWorld == other?.HomeWorld && currentHouse.IsValid && otherHouse.IsValid &&
+    currentHouse.District == otherHouse.District && currentHouse.Ward == otherHouse.Ward && currentHouse.Plot == otherHouse.Plot;
+
+  internal static bool CanRecordVisit(PlayerID? current, PlayerID owner, bool? inside, bool apartment, short room,
+      uint currentWorld, uint homeWorld) =>
+    current is not null && current == owner && homeWorld != 0 && currentWorld == homeWorld && inside == true && !apartment && room == 0;
 
   /// <summary>
   /// The function to call when changing instance. Checks timers after.
@@ -108,42 +120,6 @@ public static class HousingTimer {
     }
   }
 
-  /// <summary>
-  /// A lock for when the plugin config is saving.
-  /// </summary>
-  private static bool _isSaving;
-
-  /// <summary>
-  /// A check to make sure there is only one async  for saving.
-  /// </summary>
-  private static int _singletons = 0;
-
-  /// <summary>
-  /// Manually saves asynchronously.
-  /// </summary>
-  internal static void Update() {
-    Task.Run(WaitAndSaveAsync);
-  }
-
-  /// <summary>
-  /// The task to run when saving asynchronously.
-  /// </summary>
-  /// <returns>A generic <see cref="Task"/> object.</returns>
-  private static async Task WaitAndSaveAsync() {
-    if (_singletons > 0) {
-      return;
-    }
-
-    _singletons++;
-
-    while (_isSaving) {
-      await Task.Delay(2000);
-    }
-
-    _isSaving = true;
-    System.PluginConfig.Save();
-    await Task.Delay(2000);
-    _isSaving = false;
-    _singletons--;
-  }
+  /// <summary>Saves from the game framework or UI thread.</summary>
+  internal static void Update() => System.PluginConfig.Save();
 }

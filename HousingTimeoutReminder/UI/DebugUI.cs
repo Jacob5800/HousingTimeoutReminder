@@ -86,16 +86,6 @@ public class DebugUI : Window, IDisposable {
       ImGui.Indent(-20f);
       ImGui.Indent(-20f);
 
-      ImGui.Indent(20f);
-      ImGui.Text(nameof(PerPlayerConfig.Apartment));
-      ImGui.Indent(20f);
-      ImGui.Text($"IsLate = {playerConfig.Apartment.IsLate}");
-      ImGui.Text($"IsValid = {playerConfig.Apartment.IsValid}");
-      ImGui.Text($"Enabled = {playerConfig.Apartment.Enabled}");
-      ImGui.Text($"IsDismissed = {playerConfig.Apartment.IsDismissed}");
-      ImGui.Text($"Time = {dateTimeNow} - {playerConfig.Apartment.LastVisit} > {dateToWaitSeconds} = {dateTimeNow - playerConfig.Apartment.LastVisit > dateToWaitSeconds}");
-      ImGui.Indent(-20f);
-      ImGui.Indent(-20f);
     }
 
     ImGui.Indent(-20f);

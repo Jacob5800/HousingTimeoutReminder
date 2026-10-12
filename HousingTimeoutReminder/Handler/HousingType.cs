@@ -15,8 +15,6 @@ public enum HousingType {
   FreeCompanyEstate = 1,
   [Description("Private Estate")]
   PrivateEstate = 2,
-  [Description("Apartment")]
-  Apartment = 3,
 }
 
 public static class HousingTypeEnumHelper {

@@ -34,6 +34,7 @@ public class Plugin : IDalamudPlugin {
   /// Bool to test if repositioning the warning dialog.
   /// </summary>
   internal bool Repositioning { get; set; }
+  private long nextHousingCheck;
 
   /// <summary>
   /// The Dalamud Plugin constructor
@@ -95,6 +96,16 @@ public class Plugin : IDalamudPlugin {
       //  Svc.Log.Error(task.Exception, "Error when trying to get current player ID.");
       //});
     }
+    if (System.IsLoggedIn && System.GetCurrentPlayerID() is not null &&
+        Environment.TickCount64 >= nextHousingCheck && ECommons.GenericHelpers.IsScreenReady()) {
+      nextHousingCheck = Environment.TickCount64 + 5000;
+      try {
+        Handler.HousingManager.DetectOwnedHousing();
+        CheckTimers();
+      } catch (Exception exception) {
+        Svc.Log.Error(exception, "Failed to detect owned housing.");
+      }
+    }
   }
 
   /// <summary>
@@ -122,17 +133,7 @@ public class Plugin : IDalamudPlugin {
       return false;
     }
 
-    return System.PluginConfig.PlayerConfigs.Any(playerConfig => {
-      if (playerConfig.PlayerID is not null) {
-        if (!HousingTimer.ManualCheck(playerConfig.PlayerID, territory.Value)) {
-          Svc.Log.Warning("Failed to check the position of the player.");
-        }
-
-        return playerConfig.HasLateProperties;
-      }
-
-      return false;
-    });
+    return System.PluginConfig.PlayerConfigsWithWarnings.Count > 0;
   }
 
   /// <summary>
@@ -140,20 +141,8 @@ public class Plugin : IDalamudPlugin {
   /// </summary>
   /// <param name="territoryId">The territory ID.</param>
   private void OnTerritoryChanged(uint territoryId) {
-    Task.Run(() => {
-      byte count = 0;
-      while (!ECommons.GenericHelpers.IsScreenReady()) {
-        if (count > 50) return;
-        count++;
-        Task.Delay(400).Wait();
-      }
-
-      CheckTimers(territoryId);
-    }).ContinueWith((Task task) => {
-      if (task.Exception is not null) {
-        Svc.Log.Error(task.Exception, "Error when detecting territory change.");
-      }
-    });
+    // The framework callback reads game pointers after the loading screen clears.
+    nextHousingCheck = 0;
   }
 
   /// <summary>

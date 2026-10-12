@@ -59,11 +59,7 @@ public class SettingsUI : Window, IDisposable {
   /// </summary>
   private const int PlotMax = 60;
 
-  /// <summary>
-  /// The max number of apartments.
-  /// TODO: Update apartment counts when necessary.
-  /// </summary>
-  private const int ApartmentMax = 90;
+  private string housingDetectionStatus = string.Empty;
 
   // ReSharper disable once MemberCanBeMadeStatic.Local
   /// <summary>
@@ -79,7 +75,6 @@ public class SettingsUI : Window, IDisposable {
     long visit = type switch {
       HousingType.FreeCompanyEstate => playerConfig.FreeCompanyEstate.LastVisit,
       HousingType.PrivateEstate => playerConfig.PrivateEstate.LastVisit,
-      HousingType.Apartment => playerConfig.Apartment.LastVisit,
       _ => 0
     };
 
@@ -138,132 +133,68 @@ public class SettingsUI : Window, IDisposable {
   /// <param name="type">The type of housing to check.</param>
   /// <param name="indent">Indenting check to make the child object better formatted.</param>
   public bool DrawHousingDropDown(PerPlayerConfig playerConfig, HousingType type, float indent = 0f) {
+    var playerId = playerConfig.DisplayName;
+    ImGui.PushID($"{type}-{playerId}");
     try {
-      var playerId = playerConfig.DisplayName;
-      using (var header = ImRaii.TreeNode($"{HousingTypeEnumHelper.GetDescriptor(type)}##{type}-{playerId}", ImGuiTreeNodeFlags.Framed | ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.NoTreePushOnOpen)) {
-        if (header.Success) {
-          using (var child = ImRaii.Child($"##{type}-Child-{playerId}", new Vector2(this.GetMaxWidth() - 10f - indent, 106f * ImGuiHelpers.GlobalScale), true)) {
-            if (child.Success) {
-              if (playerConfig.GetOfType(type).IsValid) {
-                (string last, string next) = CheckConsistency(playerConfig, type);
-
-                ImGuiRaii.ColoredLabel("Your last visit was on: ", last, (string value) => {
-                  if (value.Equals("never", StringComparison.OrdinalIgnoreCase)) {
-                    return ImGuiColors.DalamudRed;
-                  }
-
-                  return ImGuiRaii.GetImGuiColor(ImGuiCol.Text);
-                });
-                ImGuiRaii.VerticalSeparator();
-                ImGuiRaii.ColoredLabel("Your next visit is on: ", next, (string value) => {
-                  if (value.Equals("now", StringComparison.OrdinalIgnoreCase)) {
-                    return ImGuiColors.DalamudRed;
-                  }
-
-                  return ImGuiRaii.GetImGuiColor(ImGuiCol.Text);
-                });
-              } else {
-                ImGui.Text($"No {HousingTypeEnumHelper.GetDescriptor(type).ToLower()} set.");
-              }
-
-              var playerHousing = playerConfig.GetOfType(type);
-
-              ImGui.Text("Enabled");
-              ImGui.SameLine();
-
-              var enabled = playerHousing.Enabled;
-
-              if (ImGui.Checkbox($"##{type}Enabled-{playerId}", ref enabled)) {
-                playerHousing.Enabled = enabled;
-              }
-
-              ImGuiRaii.VerticalSeparator();
-
-              if (ImGui.Button($"Reset##{type}Reset-{playerId}")) {
-                playerHousing.Reset();
-              }
-
-              ImGui.Text("District");
-              ImGui.SameLine();
-
-              using (var i = ImRaii.ItemWidth(100)) {
-                if (i.Count > 0) {
-                  using (var c = ImRaii.Combo($"##{type}District-{playerId}", DistrictEnumHelper.GetDescriptor(playerHousing.District))) {
-                    if (c.Success) {
-                      foreach ((string name, District district) in DistrictEnumHelper.GetDescriptors()) {
-                        if (ImGui.Selectable(name, district == playerHousing.District)) {
-                          playerHousing.District = district;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-
-              if (type == HousingType.Apartment) {
-                ImGuiRaii.VerticalSeparator();
-                ImGui.Text("Is Subdistrict");
-                ImGui.SameLine();
-
-                bool isSubdistrict = playerHousing.IsSubdistrict;
-
-                if (ImGui.Checkbox($"##{type}IsSubdistrict-{playerId}", ref isSubdistrict)) {
-                  playerHousing.Plot = (sbyte)(isSubdistrict ? -127 : -126);
-                }
-              }
-
-              ImGui.Text("Ward");
-              ImGui.SameLine();
-              using (var i = ImRaii.ItemWidth(100)) {
-                if (i.Count > 0) {
-                  int ward = playerHousing.Ward;
-
-                  // ReSharper disable once InvertIf
-                  if (ImGuiRaii.InputIntMinMax($"##{type}Ward-{playerId}", ref ward, 1, 20, 1, WardMax)) {
-                    playerHousing.Ward = (sbyte)ward;
-                  }
-                }
-              }
-
-              ImGuiRaii.VerticalSeparator();
-
-              if (type == HousingType.Apartment) {
-                ImGui.Text("Room Number");
-                ImGui.SameLine();
-                ImGui.SetNextItemWidth(100);
-
-                int apartmentNumber = playerHousing.Room;
-
-                // ReSharper disable once InvertIf
-                if (ImGuiRaii.InputIntMinMax($"##{type}RoomNumber-{playerId}", ref apartmentNumber, 1, 20, 1, ApartmentMax)) {
-                  playerHousing.Room = (sbyte)apartmentNumber;
-                }
-              } else {
-                ImGui.Text("Plot");
-                ImGui.SameLine();
-
-                using (var i = ImRaii.ItemWidth(100)) {
-                  if (i.Count > 0) {
-                    int plot = playerHousing.Plot;
-                    // ReSharper disable once InvertIf
-                    if (ImGuiRaii.InputIntMinMax($"##{type}Plot-{playerId}", ref plot, 1, 20, 1, PlotMax)) {
-                      playerHousing.Plot = (sbyte)plot;
-                    }
-                  }
-                }
+      if (!ImGui.CollapsingHeader(HousingTypeEnumHelper.GetDescriptor(type), ImGuiTreeNodeFlags.DefaultOpen)) return true;
+      var property = playerConfig.GetOfType(type);
+      if (property.IsValid) {
+        ImGui.Text($"{DistrictEnumHelper.GetDescriptor(property.District)} - Ward {property.Ward}, Plot {property.Plot}");
+        var (last, next) = CheckConsistency(playerConfig, type);
+        ImGui.Text($"Last inside visit: {(last == "Never" ? "Not recorded" : last)}");
+        ImGui.Text($"Reminder: {(next == "Now" ? "Visit needed" : next)}");
+      } else {
+        ImGui.TextWrapped("No house detected. Use Detect my housing on this character, or enter an address below.");
+      }
+      var enabled = property.Enabled;
+      if (ImGui.Checkbox("Enable reminders", ref enabled)) {
+        property.Enabled = enabled;
+        System.PluginConfig.Save();
+      }
+      var location = playerConfig.IsCurrentPlayerConfig ? Handler.HousingManager.GetCurrentLocation(Svc.ClientState.TerritoryType) : null;
+      var canRecord = location is not null && HousingTimer.CanRecordVisit(System.GetCurrentPlayerID(), playerConfig.PlayerID!, location.IsInside, location.IsApartment, location.Room,
+          Svc.Objects.LocalPlayer?.CurrentWorld.RowId ?? 0, playerConfig.PlayerID?.HomeWorld ?? 0)
+        && Handler.HousingManager.From(playerConfig.PlayerID!, type)?.Equals(location) == true && property.Enabled;
+      ImGui.BeginDisabled(!canRecord);
+      if (ImGui.Button("Record visit now")) Plugin.CheckTimers();
+      ImGui.EndDisabled();
+      ImGui.SameLine();
+      if (ImGui.Button("Clear visit history")) {
+        property.LastVisit = 0;
+        if (property is WardProperty wardProperty) wardProperty.IsDismissed = false;
+        System.PluginConfig.Save();
+      }
+      if (!canRecord) ImGui.TextDisabled("Record a visit by entering this house on its character.");
+      using (var manual = ImRaii.TreeNode("Edit address manually")) {
+        if (manual.Success) {
+          var changed = false;
+          ImGui.SetNextItemWidth(200);
+          using (var combo = ImRaii.Combo("District", DistrictEnumHelper.GetDescriptor(property.District))) {
+            if (combo.Success) {
+              foreach (var (name, district) in DistrictEnumHelper.GetDescriptors()) {
+                if (ImGui.Selectable(name, property.District == district)) { property.District = district; changed = true; }
               }
             }
           }
+          int ward = property.Ward, plot = property.Plot;
+          ImGui.SetNextItemWidth(140);
+          if (ImGuiRaii.InputIntMinMax("Ward", ref ward, 1, 5, 1, WardMax)) { property.Ward = (sbyte)ward; changed = true; }
+          ImGui.SetNextItemWidth(140);
+          if (ImGuiRaii.InputIntMinMax("Plot", ref plot, 1, 5, 1, PlotMax)) { property.Plot = (sbyte)plot; changed = true; }
+          if (changed) {
+            property.LastVisit = 0;
+            if (property is WardProperty wardProperty) wardProperty.IsDismissed = false;
+            System.PluginConfig.Save();
+          }
         }
       }
-    } catch (Exception ex) {
-      Svc.Log.Error(ex, nameof(DrawHousingDropDown));
+      ImGui.Separator();
+      return true;
+    } catch (Exception exception) {
+      Svc.Log.Error(exception, "Failed to draw housing settings.");
       return false;
-    }
-
-    return true;
+    } finally { ImGui.PopID(); }
   }
-
   /// <summary>
   /// Draws player timeout settings for a single user.
   /// </summary>
@@ -277,10 +208,6 @@ public class SettingsUI : Window, IDisposable {
 
     if (!DrawHousingDropDown(playerConfig, HousingType.PrivateEstate, indent + ScaledIndent5)) {
       ImGui.Text($"Failed to draw {HousingTypeEnumHelper.GetDescriptor(HousingType.PrivateEstate).ToLower()} tab.");
-    }
-
-    if (!DrawHousingDropDown(playerConfig, HousingType.Apartment, indent + ScaledIndent5)) {
-      ImGui.Text($"Failed to draw {HousingTypeEnumHelper.GetDescriptor(HousingType.Apartment).ToLower()} tab.");
     }
 
     // ReSharper disable once InvertIf
@@ -297,7 +224,7 @@ public class SettingsUI : Window, IDisposable {
           return true;
         }
 
-        ImGui.Text("Days To Wait");
+        ImGui.Text("Remind me after this many days without an inside visit");
         ImGui.SameLine();
         using (var i = ImRaii.ItemWidth(100)) {
           if (i.Count > 0) {
@@ -311,7 +238,7 @@ public class SettingsUI : Window, IDisposable {
 
         var displayAllPlayers = System.PluginConfig.ShowAllPlayers;
 
-        if (ImGui.Checkbox("Show All Player Timeouts##GlobalShowAllPlayers", ref displayAllPlayers)) {
+        if (ImGui.Checkbox("Show reminders for all saved characters##GlobalShowAllPlayers", ref displayAllPlayers)) {
           System.PluginConfig.ShowAllPlayers = displayAllPlayers;
         }
       }
@@ -332,6 +259,14 @@ public class SettingsUI : Window, IDisposable {
 
         if (System.IsLoggedIn && Config.PlayerConfiguration is not null) {
           ImGui.Text($"Housing Configuration for {Config.PlayerConfiguration.DisplayName}:");
+          ImGui.TextWrapped("Owned housing is detected automatically. If details are missing, open your Teleport list and try detection again.");
+          if (ImGui.Button("Detect my housing")) {
+            var count = Handler.HousingManager.DetectOwnedHousing(true);
+            housingDetectionStatus = count > 0
+              ? $"Detected {count} owned housing location(s). Visit times are recorded when you enter the property."
+              : "No owned housing data is available yet. Open Teleport on your home world, then try again.";
+          }
+          if (!string.IsNullOrEmpty(housingDetectionStatus)) ImGui.TextWrapped(housingDetectionStatus);
           DrawUserTimeoutSettings(Config.PlayerConfiguration);
         }
       }
@@ -356,6 +291,7 @@ public class SettingsUI : Window, IDisposable {
         ImGui.Text($"System.PluginConfig.PlayerConfigs.Count: {System.PluginConfig.PlayerConfigs.Count}");
 #endif
 
+        ImGui.TextWrapped("Each character is remembered after you log into it with this plugin enabled. Its saved housing reminders can appear while you play another character.");
         foreach (var config in System.PluginConfig.PlayerConfigs.Where(config => !config.IsCurrentPlayerConfig)) {
           using (var header = ImRaii.TreeNode($"Housing Configuration for {config.DisplayName}", ImGuiTreeNodeFlags.Framed | ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.NoTreePushOnOpen)) {
             if (header.Success) {
@@ -378,23 +314,22 @@ public class SettingsUI : Window, IDisposable {
   public override void Draw() {
     using (var tabBar = ImRaii.TabBar("ConfigTabs")) {
       if (tabBar.Success) {
-        using (var tabItem = ImRaii.TabItem("Global")) {
-          if (tabItem.Success && !DrawGlobalTab()) {
-            ImGui.Text("Failed to draw global settings tab.");
-          }
-        }
-
         if (System.IsLoggedIn) {
-          using (var tabItem = ImRaii.TabItem("Current Player")) {
+          using (var tabItem = ImRaii.TabItem("Current character")) {
             if (tabItem.Success && !DrawCurrentPlayerTab()) {
               ImGui.Text("Failed to draw current player settings tab.");
             }
           }
         }
 
-        using (var tabItem = ImRaii.TabItem("Other Players")) {
+        using (var tabItem = ImRaii.TabItem("Saved characters")) {
           if (tabItem.Success && !DrawOtherPlayersTab()) {
             ImGui.Text("Failed to draw other players settings tab.");
+          }
+        }
+        using (var tabItem = ImRaii.TabItem("Settings")) {
+          if (tabItem.Success && !DrawGlobalTab()) {
+            ImGui.Text("Failed to draw global settings tab.");
           }
         }
       }

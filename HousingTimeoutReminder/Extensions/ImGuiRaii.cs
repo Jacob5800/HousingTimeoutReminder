@@ -55,13 +55,7 @@ public static partial class ImGuiRaii {
   public static bool InputIntMinMax(string label, ref int input, int step, int stepFast, int min, int max) {
     // ReSharper disable once InvertIf
     if (ImGui.InputInt(label, ref input, step, stepFast)) {
-      if (input > max) {
-        input = min;
-      }
-
-      if (input < min) {
-        input = 1;
-      }
+      input = Math.Clamp(input, min, max);
 
       return true;
     }

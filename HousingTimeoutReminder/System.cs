@@ -52,7 +52,11 @@ public static class System {
   /// initialize another class, in the plugin constructor.
   /// </summary>
   internal static void Init() {
-    PluginConfig = (Svc.PluginInterface.GetPluginConfig() as Config ?? new Config()).Migrate();
+    var savedConfig = Svc.PluginInterface.GetPluginConfig() as Config ?? new Config();
+    var needsMigration = savedConfig.Version != Config.CurrentVersion;
+    PluginConfig = savedConfig.Migrate();
+    PluginConfig.Initialize();
+    if (needsMigration) PluginConfig.Save();
 
     WindowSystem.AddWindow(SettingsUI);
     WindowSystem.AddWindow(WarningUI);

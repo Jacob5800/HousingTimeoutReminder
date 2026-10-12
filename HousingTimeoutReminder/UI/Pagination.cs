@@ -63,12 +63,14 @@ public class Pagination {
         yield return HousingType.FreeCompanyEstate;
       if (playerConfig.PrivateEstate.IsLate)
         yield return HousingType.PrivateEstate;
-      if (playerConfig.Apartment.IsLate)
-        yield return HousingType.Apartment;
     }
   }
 
   public void WrapPages() {
+    if (TotalPages == 0) {
+      this.CurrentPage = this.CurrentMainPage = this.CurrentValidSubPage = 0;
+      return;
+    }
     if (this.CurrentValidSubPage < 0) {
       this.CurrentValidSubPage = this.ValidSubPages.Length - 1;
     }

@@ -39,6 +39,9 @@ jobs:
       - name: Build plugin package
         run: dotnet build .\HousingTimeoutReminder.sln --configuration Release -p:RestoreLockedMode=true
 
+      - name: Check owned housing addresses and inside-visit rules
+        run: dotnet run --project tests/HousingChecks/HousingChecks.csproj --configuration Release
+
       - name: Prepare release asset
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh

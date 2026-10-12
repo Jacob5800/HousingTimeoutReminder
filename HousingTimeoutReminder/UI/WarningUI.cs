@@ -87,7 +87,7 @@ public class WarningUI : Window, IDisposable {
     var wrappedHeight = ImGui.CalcTextSize(text, false, (this.Size?.X ?? 500f) - (padding * 2)).Y;
 
     if (WindowHeight != INITIAL_WINDOW_HEIGHT + (wrappedHeight - height)) {
-      WindowHeight += wrappedHeight - height;
+      WindowHeight = INITIAL_WINDOW_HEIGHT + (wrappedHeight - height);
       this.Size = new Vector2(500f, WindowHeight) * ImGuiHelpers.GlobalScale;
     }
 
@@ -107,6 +107,14 @@ public class WarningUI : Window, IDisposable {
   /// <param name="type">The type of housing to display.</param>
   /// <param name="playerConfig">An instance of a <see cref="PerPlayerConfig" />.</param>
   public void DisplayForPlayer(HousingType type, PerPlayerConfig playerConfig) {
+    var property = playerConfig.GetOfType(type);
+    if (property.LastVisit <= 0) {
+      if (this.DisplayText($"No visit has been recorded for the {HousingTypeEnumHelper.GetDescriptor(type)} of {playerConfig.DisplayName}. Enter the property on that character to record a visit.")) {
+        if (property is WardProperty wardProperty) wardProperty.IsDismissed = true;
+        this.Pagination.WrapPages();
+      }
+      return;
+    }
     DateTimeOffset dateTimeOffset = DateTime.Now;
     DateTimeOffset dateTimeOffsetLast;
     int pastDays;
@@ -126,15 +134,6 @@ public class WarningUI : Window, IDisposable {
         pastDays = (int)dateTimeOffset.Subtract(dateTimeOffsetLast).TotalDays;
         if (this.DisplayText($"The Private Estate of {playerConfig.DisplayName} has not been visited in, {pastDays} days.")) {
           playerConfig.PrivateEstate.IsDismissed = true;
-          this.Pagination.WrapPages();
-        }
-
-        break;
-      case HousingType.Apartment:
-        dateTimeOffsetLast = DateTimeOffset.FromUnixTimeSeconds(playerConfig.Apartment.LastVisit);
-        pastDays = (int)dateTimeOffset.Subtract(dateTimeOffsetLast).TotalDays;
-        if (this.DisplayText($"The Apartment of {playerConfig.DisplayName} has not been visited in, {pastDays} days.")) {
-          playerConfig.Apartment.IsDismissed = true;
           this.Pagination.WrapPages();
         }
 
@@ -175,13 +174,12 @@ public class WarningUI : Window, IDisposable {
     if (System.PluginInstance.Repositioning) {
       this.DrawRepositioning();
     } else if (System.IsLoggedIn) {
+      this.Pagination.WrapPages();
       if (this.Pagination.CurrentPlayerConfig is { } config) {
         if (this.Pagination.CurrentSubPage is HousingType.FreeCompanyEstate) {
           _ = this.DrawWarning(HousingType.FreeCompanyEstate, config);
         } else if (this.Pagination.CurrentSubPage is HousingType.PrivateEstate) {
           _ = this.DrawWarning(HousingType.PrivateEstate, config);
-        } else if (this.Pagination.CurrentSubPage is HousingType.Apartment) {
-          _ = this.DrawWarning(HousingType.Apartment, config);
         }
       }
 

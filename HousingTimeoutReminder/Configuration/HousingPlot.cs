@@ -21,7 +21,7 @@ public class HousingPlot : WardProperty {
   }
 
   /// <inheritdoc />
-  public override bool IsValid => !this.District.Equals(District.Unknown) && (this.Ward > 0) && (this.Plot > 0);
+  public override bool IsValid => this.District != District.Unknown && this.Ward is >= 1 and <= 32 && this.Plot is >= 1 and <= 60;
 
   /// <inheritdoc />
   public override void Reset() {
@@ -36,7 +36,7 @@ public class HousingPlot : WardProperty {
 
   [JsonExtensionData]
   [SuppressMessage("Roslynator", "RCS1169")]
-  private IDictionary<string, JToken>? _additionalData;
+  private IDictionary<string, JToken>? _additionalData = null;
 
   [OnDeserialized]
   private void OnDeserialized(StreamingContext context)

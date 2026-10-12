@@ -54,21 +54,16 @@ public class PerPlayerConfig : IInterface {
   public HousingPlot PrivateEstate { get; set; } = new();
 
   /// <summary>
-  /// The player's Apartment location.
-  /// </summary>
-  public Apartment Apartment { get; set; } = new();
-
-  /// <summary>
   /// Gets a <see langword="bool" /> that determines if any of the enabled housing properties are late.
   /// </summary>
   [JsonIgnore]
-  public bool HasLateProperties => this.FreeCompanyEstate.IsLate || this.PrivateEstate.IsLate || this.Apartment.IsLate;
+  public bool HasLateProperties => this.FreeCompanyEstate.IsLate || this.PrivateEstate.IsLate;
 
   /// <summary>
   /// Checks if this is the current player config.
   /// </summary>
   [JsonIgnore]
-  public bool IsCurrentPlayerConfig => System.IsLoggedIn && Config.PlayerConfiguration?.DisplayName.Equals(this.DisplayName) == true;
+  public bool IsCurrentPlayerConfig => PlayerID is not null && PlayerID == System.GetCurrentPlayerID();
 
   /// <summary>
   /// Resets the dismissed states of all properties.
@@ -76,20 +71,19 @@ public class PerPlayerConfig : IInterface {
   public void ResetWarnings() {
     this.FreeCompanyEstate.IsDismissed = false;
     this.PrivateEstate.IsDismissed = false;
-    this.Apartment.IsDismissed = false;
   }
 
   /// <summary>
   /// Checks if the player config is valid.
   /// </summary>
   [JsonIgnore]
-  public bool IsValid => FreeCompanyEstate.IsValid && PrivateEstate.IsValid && Apartment.IsValid;
+  public bool IsValid => FreeCompanyEstate.IsValid || PrivateEstate.IsValid;
 
   /// <summary>
   /// Ensures the config directory exists on the file system.
   /// </summary>
   public static void EnsureConfigDirectory() {
-    if (Directory.Exists(Config.ConfigDirectory)) {
+    if (!Directory.Exists(Config.ConfigDirectory)) {
       Directory.CreateDirectory(Config.ConfigDirectory);
     }
   }
@@ -103,17 +97,18 @@ public class PerPlayerConfig : IInterface {
     return type switch {
       HousingType.FreeCompanyEstate => this.FreeCompanyEstate,
       HousingType.PrivateEstate => this.PrivateEstate,
-      _ => this.Apartment,
+      _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
   }
 
   [JsonExtensionData]
   [SuppressMessage("Roslynator", "RCS1169")]
-  private IDictionary<string, JToken>? _additionalData;
+  private IDictionary<string, JToken>? _additionalData = null;
 
   [OnDeserialized]
   private void OnDeserialized(StreamingContext context)
   {
+    _additionalData?.Remove("Apartment");
     if (_additionalData is null) {
 #if DEBUG
       Svc.Log.Warning("PerPlayerConfig _additionalData is null");
@@ -121,11 +116,9 @@ public class PerPlayerConfig : IInterface {
       return;
     }
 
-#if DEBUG
     if (_additionalData.TryGetValue("OwnerName", out var value) && value.NotNull(out JToken token) && token.Value<string>() is string @string) {
       this.PlayerID = new PlayerID(@string);
       _additionalData.Remove("OwnerName");
     }
-#endif
   }
 }

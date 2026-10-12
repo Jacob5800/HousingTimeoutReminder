@@ -9,4 +9,9 @@ tags:
   - Utility
 icon_url: https://raw.githubusercontent.com/Jacob5800/HousingTimeoutReminder/main/HousingTimeoutReminder/images/icon.png
 changelog: |-
-  Updated for Dalamud API 15 and .NET 10.
+  ### 1.0.5.0
+  - Automatically detect owned personal houses and FC estates, including district, ward, and plot.
+  - Track saved alt characters and show their reminders by default.
+  - Count visits only inside the matching estate; yards and FC private chambers do not count.
+  - Remove apartment reminders and simplify housing settings.
+  - Fix the all-character toggle and warning display.

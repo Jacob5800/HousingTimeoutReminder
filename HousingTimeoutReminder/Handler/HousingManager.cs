@@ -21,7 +21,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
   /// The apartment wing. (or division)
   /// Determines the division the house is in but only if it is an apartment.
   /// </summary>
-  public int ApartmentWing => Plot switch { -126 => 1, -127 => 2, _ => 0, };
+  public int ApartmentWing => Plot switch { -127 => 1, -126 => 2, _ => 0, };
   /// <summary>
   /// The room of the apartment.
   /// </summary>
@@ -94,11 +94,11 @@ public sealed class HousingManager: IEquatable<HousingManager> {
   /// <return>The district the player is in.</return>
   public static District ConvertToDistrict(uint territory) {
     return territory switch {
-      345 or 346 or 347 or 386 or 424 or 610 => District.Goblet,
-      282 or 283 or 284 or 384 or 423 or 608 => District.Mist,
-      342 or 343 or 344 or 385 or 425 or 609 => District.LavenderBeds,
-      980 or 981 or 982 or 983 or 984 or 999 => District.Empyreum,
-      649 or 650 or 651 or 652 or 653 or 655 => District.Shirogane,
+      341 or 345 or 346 or 347 or 386 or 424 or 610 => District.Goblet,
+      339 or 282 or 283 or 284 or 384 or 423 or 608 => District.Mist,
+      340 or 342 or 343 or 344 or 385 or 425 or 609 => District.LavenderBeds,
+      979 or 980 or 981 or 982 or 983 or 984 or 999 => District.Empyreum,
+      641 or 649 or 650 or 651 or 652 or 653 or 655 => District.Shirogane,
       _ => District.Unknown,
     };
   }
@@ -112,10 +112,15 @@ public sealed class HousingManager: IEquatable<HousingManager> {
     try {
       unsafe {
         var manager = CSHousingManager.Instance();
+        if (manager == null || manager->CurrentTerritory == null) return null;
         var isInside = manager->IsInside();
         short room = manager->GetCurrentRoom();
         sbyte plot = manager->GetCurrentPlot();
         sbyte ward = manager->GetCurrentWard();
+        if (isInside) {
+          var originalTerritory = CSHousingManager.GetOriginalHouseTerritoryTypeId();
+          if (ConvertToDistrict(originalTerritory) != District.Unknown) territory = originalTerritory;
+        }
         return new HousingManager((sbyte)(plot + 1), (sbyte)(ward + 1), territory, room, isInside);
       }
     } catch (Exception exception) {
@@ -123,6 +128,61 @@ public sealed class HousingManager: IEquatable<HousingManager> {
     }
 
     return null;
+  }
+
+  /// <summary>Read only the logged-in character's owned properties, never the house being visited.</summary>
+  internal static unsafe int DetectOwnedHousing(bool refreshExisting = false) {
+    if (!System.IsLoggedIn || Svc.Objects.LocalPlayer is not { } player) return 0;
+    var playerId = new PlayerID(player);
+    System.CachedCurrentPlayerId = playerId;
+    var knownCharacter = Config.PlayerConfiguration is not null;
+    var config = Config.GetPlayerConfig(playerId);
+    var detected = 0;
+    var changed = !knownCharacter;
+    foreach (var type in new[] { HousingType.PrivateEstate, HousingType.FreeCompanyEstate }) {
+      var estateType = type switch {
+        HousingType.PrivateEstate => FFXIVClientStructs.FFXIV.Client.Game.EstateType.PersonalEstate,
+        _ => FFXIVClientStructs.FFXIV.Client.Game.EstateType.FreeCompanyEstate,
+      };
+      // HouseId is a packed eight-byte value documented by FFXIVClientStructs.
+      var raw = CSHousingManager.GetOwnedHouseId(estateType).Id;
+      if (!TryDecodeOwnedHouse(raw, player.HomeWorld.RowId, type, out var district, out var ward, out var plot, out var room)) continue;
+      detected++;
+      var property = config.GetOfType(type);
+      if (property.IsValid && !refreshExisting) continue;
+      if (property.District == district && property.Ward == ward && property.Plot == plot && property.Room == room) continue;
+      var wasConfigured = property.IsValid;
+      var hadAddress = property.District != District.Unknown || property.Ward != 0 || property.Plot != 0 || property.Room != 0;
+      property.District = district;
+      property.Ward = ward;
+      property.Plot = plot;
+      property.Room = room;
+      // An old property's visit must not carry over to a different address.
+      if (hadAddress) property.LastVisit = 0;
+      if (!wasConfigured) property.Enabled = true;
+      if (property is WardProperty wardProperty) wardProperty.IsDismissed = false;
+      changed = true;
+    }
+    if (changed) System.PluginConfig.Save();
+    return detected;
+  }
+
+  internal static bool TryDecodeOwnedHouse(ulong raw, uint homeWorld, HousingType type,
+      out District district, out sbyte ward, out sbyte plot, out short room) {
+    district = District.Unknown;
+    ward = plot = 0;
+    room = 0;
+    if (raw == 0 || raw == ulong.MaxValue || (ushort)(raw >> 48) != homeWorld) return false;
+    district = ConvertToDistrict((ushort)(raw >> 32));
+    var unit = (byte)raw;
+    var data = (ushort)(raw >> 16);
+    var apartment = (unit & 0x80) != 0;
+    var wardIndex = data & 0x3F;
+    if (district == District.Unknown || wardIndex >= 32 || apartment || type is not (HousingType.PrivateEstate or HousingType.FreeCompanyEstate)) return false;
+    ward = (sbyte)(wardIndex + 1);
+    if (unit >= 60 || (data >> 6) != 0) return false;
+    plot = (sbyte)(unit + 1);
+    return true;
   }
 
   /// <summary>
@@ -139,8 +199,6 @@ public sealed class HousingManager: IEquatable<HousingManager> {
         new HousingManager(fcHousingPlot.Plot, fcHousingPlot.Ward, fcHousingPlot.District),
       HousingType.PrivateEstate when playerConfig.PrivateEstate is IWardProperty peHousingPlot => new HousingManager(
         peHousingPlot.Plot, peHousingPlot.Ward, peHousingPlot.District),
-      HousingType.Apartment when playerConfig.Apartment is IWardProperty apartment => new HousingManager(apartment.Plot,
-        apartment.Ward, apartment.District, apartment.Room),
       _ => null
     };
   }
