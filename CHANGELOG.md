@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.5.3
+
+- Updated compatibility for FFXIV patch 7.57.
+
 ## 1.0.5.2
 
 - Add `/house` as an alternative to `/htimeout`.

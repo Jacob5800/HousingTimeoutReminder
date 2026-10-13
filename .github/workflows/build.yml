@@ -24,7 +24,7 @@ jobs:
         run: |
           $dalamudDev = Join-Path $env:APPDATA 'XIVLauncher\addon\Hooks\dev'
           New-Item -ItemType Directory -Path $dalamudDev -Force | Out-Null
-          Invoke-WebRequest -Uri 'https://goatcorp.github.io/dalamud-distrib/latest.zip' -OutFile 'dalamud-latest.zip'
+          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/goatcorp/dalamud-distrib/a44d77c7f7927aec7f706df3ab3cb6d4f45f2a59/stg/latest.zip' -OutFile 'dalamud-latest.zip'
           Expand-Archive -LiteralPath 'dalamud-latest.zip' -DestinationPath $dalamudDev -Force
 
       - name: Verify release version

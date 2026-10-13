@@ -9,6 +9,5 @@ tags:
   - Utility
 icon_url: https://raw.githubusercontent.com/Jacob5800/HousingTimeoutReminder/main/HousingTimeoutReminder/images/icon.png
 changelog: |-
-  ### 1.0.5.2
-  - Add /house as an alternative command to /htimeout.
-  - Add an Enable FC estate reminders setting, enabled by default. Turning it off hides FC reminders for all saved characters while keeping personal-house reminders active.
+  ### 1.0.5.3
+  - Updated compatibility for FFXIV patch 7.57.
