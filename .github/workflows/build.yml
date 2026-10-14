@@ -42,6 +42,10 @@ jobs:
       - name: Check owned housing addresses and inside-visit rules
         run: dotnet run --project tests/HousingChecks/HousingChecks.csproj --configuration Release
 
+      - name: Stamp packaged publication date
+        shell: pwsh
+        run: ./scripts/Stamp-PackageDate.ps1 -PackageDirectory 'bin/Release/HousingTimeoutReminder' -InternalName 'HousingTimeoutReminder'
+
       - name: Prepare release asset
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
