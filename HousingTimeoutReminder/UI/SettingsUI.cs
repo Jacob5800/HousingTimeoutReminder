@@ -22,6 +22,7 @@ namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.UI;
 public class SettingsUI : Window, IDisposable {
   private string backupImportPath = string.Empty;
   private string backupStatus = string.Empty;
+  private global::System.Collections.Generic.List<PerPlayerConfig>? housingImportPreview;
   /// <summary>
   /// The default window flags of the settings ui.
   /// We disable the scroll with mouse because we have it layed out to have
@@ -281,7 +282,7 @@ public class SettingsUI : Window, IDisposable {
         if (ImGui.Button("Open backup folder")) Dalamud.Utility.Util.OpenLink(Config.ConfigDirectory);
         ImGui.TextWrapped("Export contains all saved characters, house addresses and visit dates. Move the JSON backup to your new PC; it contains character names and home worlds.");
         ImGui.InputText("Backup JSON path", ref backupImportPath, 1024);
-        if (ImGui.Button("Import houses and visits (merge)")) {
+        if (ImGui.Button("Preview housing import")) {
           try {
             var file = new global::System.IO.FileInfo(backupImportPath.Trim().Trim('"'));
             if (!file.Exists || file.Length > 5 * 1024 * 1024) throw new InvalidOperationException("Select an existing backup JSON smaller than 5 MB.");
@@ -289,6 +290,27 @@ public class SettingsUI : Window, IDisposable {
               global::System.IO.File.ReadAllText(file.FullName)) ?? throw new InvalidOperationException("Invalid backup.");
             if (entries.Count > 1000 || entries.Any(entry => entry is null || entry.PlayerID is null || entry.PrivateEstate is null || entry.FreeCompanyEstate is null))
               throw new InvalidOperationException("Backup contains invalid character records.");
+            housingImportPreview = entries;
+            backupStatus = $"Preview ready: {entries.Count} character(s). Nothing imported yet.";
+          } catch (Exception ex) { housingImportPreview = null; backupStatus = $"Preview failed: {ex.Message}"; }
+        }
+        if (housingImportPreview is { } preview) {
+          ImGui.TextWrapped("Merge adds missing houses and keeps the newest visit for matching addresses. Conflicting existing addresses are preserved.");
+          foreach (var player in preview) {
+            ImGui.TextWrapped(player.DisplayName);
+            foreach (var entry in new[] { (House: player.PrivateEstate, Name: "Personal"), (House: player.FreeCompanyEstate, Name: "FC") }) {
+              if (!entry.House.IsValid) continue;
+              ImGui.TextWrapped($"{entry.Name}: {entry.House.District}, ward {entry.House.Ward}, plot {entry.House.Plot} · last visit: {(entry.House.LastVisit > 0 ? Config.FormatVisitDate(DateTimeOffset.FromUnixTimeSeconds(entry.House.LastVisit)) : "none recorded")}");
+            }
+          }
+          if (ImGui.Button("Cancel import preview")) housingImportPreview = null;
+          ImGui.SameLine();
+          if (ImGui.Button("Import previewed houses (merge)")) {
+          try {
+            var entries = preview;
+            global::System.IO.Directory.CreateDirectory(Config.ConfigDirectory);
+            var safety = global::System.IO.Path.Combine(Config.ConfigDirectory, $"housing-before-import-{DateTime.Now:yyyyMMdd-HHmmssfff}.json");
+            global::System.IO.File.WriteAllText(safety, Newtonsoft.Json.JsonConvert.SerializeObject(System.PluginConfig.PlayerConfigs, Newtonsoft.Json.Formatting.Indented));
             var added = 0;
             foreach (var entry in entries) {
               var existing = System.PluginConfig.PlayerConfigs.FirstOrDefault(player => player.PlayerID == entry.PlayerID);
@@ -306,9 +328,11 @@ public class SettingsUI : Window, IDisposable {
               }
             }
             System.PluginConfig.Save();
-            backupStatus = $"Imported {added} new character(s). Matching addresses keep the latest visit. Conflicting existing addresses are preserved.";
+            housingImportPreview = null;
+            backupStatus = $"Imported {added} new character(s). Latest matching visits retained; conflicting addresses preserved. Safety backup: {safety}";
           } catch (Exception ex) { backupStatus = $"Import failed: {ex.Message}"; Svc.Log.Error(ex, "Housing backup import failed"); }
         }
+          }
         if (!string.IsNullOrEmpty(backupStatus)) ImGui.TextWrapped(backupStatus);
         var enableFc = System.PluginConfig.EnableFcReminders;
         if (ImGui.Checkbox("Enable FC estate reminders", ref enableFc)) {
