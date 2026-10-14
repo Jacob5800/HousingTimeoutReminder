@@ -60,6 +60,9 @@ public class Config : IPluginConfiguration {
   /// Shows warnings for all players regardless of who is logged in.
   /// </summary>
   public bool ShowAllPlayers { get; set; } = true;
+  public bool ShowServerBar { get; set; }
+  public bool ColorServerBarUrgency { get; set; }
+  public bool EchoVisitRecorded { get; set; } = true;
   public bool EnableFcReminders { get; set; } = true;
 
 

@@ -1,3 +1,5 @@
+using Dalamud.Game.Gui.Dtr;
+using Dalamud.Game.Text.SeStringHandling;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -37,6 +39,7 @@ public class Plugin : IDalamudPlugin {
   /// </summary>
   internal bool Repositioning { get; set; }
   private long nextHousingCheck;
+  private readonly IDtrBarEntry housingBar;
 
   /// <summary>
   /// The Dalamud Plugin constructor
@@ -48,6 +51,8 @@ public class Plugin : IDalamudPlugin {
     ECommons.ECommonsMain.Init(pluginInterface, System.PluginInstance);
 
     System.Init();
+    housingBar = Svc.DtrBar.Get("Housing Timeout Reminder", "HT");
+    housingBar.OnClick = _ => System.SettingsUI.IsOpen = true;
 
     Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand) {
       HelpMessage = "The config menu for the housing timer reminder plugin."
@@ -73,6 +78,7 @@ public class Plugin : IDalamudPlugin {
   /// Dispose of the Dalamud Plugin safely.
   /// </summary>
   public void Dispose() {
+    housingBar.Remove();
     System.WindowSystem.RemoveAllWindows();
     System.WarningUI.Dispose();
     System.SettingsUI.Dispose();
@@ -91,6 +97,7 @@ public class Plugin : IDalamudPlugin {
     GC.SuppressFinalize(this);
   }
   private void OnFrameworkUpdate(IFramework framework) {
+    housingBar.Shown = System.PluginConfig.ShowServerBar;
     if (Svc.Objects.LocalPlayer is not null) {
       //Task.Run(() => {
       if (Svc.Objects.LocalPlayer is IPlayerCharacter player) {
@@ -110,12 +117,38 @@ public class Plugin : IDalamudPlugin {
         Handler.HousingManager.DetectOwnedHousing();
         if (System.PluginConfig.EnableFcReminders) FreeCompanyAccess.Refresh();
         CheckTimers();
+        UpdateHousingBar();
       } catch (Exception exception) {
         Svc.Log.Error(exception, "Failed to detect owned housing.");
       }
     }
   }
 
+  private void UpdateHousingBar() {
+    var config = System.PluginConfig;
+    var houses = config.PlayerConfigs.SelectMany(player => new[] {
+      (Player: player, House: player.PrivateEstate, Kind: "Personal estate", Allowed: true),
+      (Player: player, House: player.FreeCompanyEstate, Kind: "FC estate", Allowed: config.EnableFcReminders && player.FcEstateAccess != false)
+    }).Where(entry => entry.Allowed && entry.House.Enabled && entry.House.IsValid)
+      .OrderBy(entry => entry.House.LastVisit == 0 ? long.MinValue : HousingTimer.GetOffset(entry.House.LastVisit)).ToArray();
+    if (houses.Length == 0) {
+      housingBar.Text = "HT";
+      housingBar.Tooltip = "No enabled houses tracked. Click to open Housing Timeout Reminder.";
+      return;
+    }
+    var next = houses[0];
+    var due = next.House.LastVisit == 0 ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(HousingTimer.GetOffset(next.House.LastVisit));
+    var remaining = due - DateTimeOffset.UtcNow;
+    var label = new SeStringBuilder();
+    if (config.ColorServerBarUrgency && remaining.TotalDays <= 3) label.AddUiForeground((ushort)(remaining <= TimeSpan.Zero ? 17 : 31));
+    label.AddText("HT");
+    if (config.ColorServerBarUrgency && remaining.TotalDays <= 3) label.AddUiForegroundOff();
+    housingBar.Text = label.Build();
+    housingBar.Tooltip = $"Next visit reminder: {next.Player.DisplayName}\n{next.Kind}: {next.House.District}, ward {next.House.Ward}, plot {next.House.Plot}\n" +
+      (next.House.LastVisit == 0 ? "No interior visit recorded." : $"Last interior visit: {DateTimeOffset.FromUnixTimeSeconds(next.House.LastVisit).ToLocalTime():g}\n" +
+      (remaining <= TimeSpan.Zero ? "Visit reminder due now." : $"Reminder due in {Math.Ceiling(remaining.TotalDays)} day(s).")) +
+      "\nBased on saved visits and your reminder interval, not Square Enix's demolition timer. Click to open.";
+  }
   /// <summary>
   /// Checks the timers when necessary.
   /// </summary>

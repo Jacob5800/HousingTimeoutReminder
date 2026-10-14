@@ -39,7 +39,7 @@ public static class HousingTimer {
       if (loc.Room == 0 && playerConfig.PrivateEstate.Enabled) {
         var privateEstate = HousingManager.From(playerID, HousingType.PrivateEstate);
         if (privateEstate?.Equals(loc) == true) {
-          if (RecordVisit(playerConfig.PrivateEstate)) Update();
+          if (RecordVisit(playerConfig.PrivateEstate)) { Update(); ConfirmVisit(playerConfig, playerConfig.PrivateEstate, "personal estate"); }
           return true;
         }
       }
@@ -52,7 +52,7 @@ public static class HousingTimer {
             if (IsSameFcEstate(playerID, saved.PlayerID, playerConfig.FreeCompanyEstate, saved.FreeCompanyEstate))
               changed |= RecordVisit(saved.FreeCompanyEstate);
           }
-          if (changed) Update();
+          if (changed) { Update(); ConfirmVisit(playerConfig, playerConfig.FreeCompanyEstate, "FC estate"); }
           return true;
         }
       }
@@ -64,6 +64,17 @@ public static class HousingTimer {
     return true;
   }
 
+  private static string? lastConfirmedVisit;
+  private static void ConfirmVisit(PerPlayerConfig player, HousingPlot house, string kind) {
+    var key = $"{player.DisplayName}:{kind}:{house.District}:{house.Ward}:{house.Plot}";
+    if (!System.PluginConfig.EchoVisitRecorded || lastConfirmedVisit == key) return;
+    lastConfirmedVisit = key;
+    Svc.Chat.Print(new Dalamud.Game.Text.XivChatEntry {
+      Type = Dalamud.Game.Text.XivChatType.Echo,
+      Message = new Dalamud.Game.Text.SeStringHandling.SeStringBuilder().AddText(
+        $"[Housing Timeout Reminder] Interior visit recorded: {player.DisplayName}, {kind}, {house.District}, ward {house.Ward}, plot {house.Plot}.").Build()
+    });
+  }
   private static bool RecordVisit(WardProperty property) {
     var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     if (now - property.LastVisit < 60) return false;

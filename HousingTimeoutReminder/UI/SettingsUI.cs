@@ -20,6 +20,8 @@ namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.UI;
 /// The class for the settings of the plugin.
 /// </summary>
 public class SettingsUI : Window, IDisposable {
+  private string backupImportPath = string.Empty;
+  private string backupStatus = string.Empty;
   /// <summary>
   /// The default window flags of the settings ui.
   /// We disable the scroll with mouse because we have it layed out to have
@@ -218,7 +220,7 @@ public class SettingsUI : Window, IDisposable {
     }
 
     // ReSharper disable once InvertIf
-    if (ImGui.Button($"Reset Warnings##Reset-{playerId}")) {
+    if (ImGui.Button($"Show dismissed reminders again##Reset-{playerId}")) {
       Plugin.CheckTimers();
       playerConfig.ResetWarnings();
     }
@@ -248,6 +250,55 @@ public class SettingsUI : Window, IDisposable {
         if (ImGui.Checkbox("Show reminders for all saved characters##GlobalShowAllPlayers", ref displayAllPlayers)) {
           System.PluginConfig.ShowAllPlayers = displayAllPlayers;
         }
+        var showBar = System.PluginConfig.ShowServerBar;
+        if (ImGui.Checkbox("Show HT server-bar button", ref showBar)) { System.PluginConfig.ShowServerBar = showBar; System.PluginConfig.Save(); }
+        var colorBar = System.PluginConfig.ColorServerBarUrgency;
+        if (ImGui.Checkbox("Color HT by reminder urgency", ref colorBar)) { System.PluginConfig.ColorServerBarUrgency = colorBar; System.PluginConfig.Save(); }
+        ImGui.TextWrapped("Yellow: reminder within 3 days. Red: reminder due or no visit recorded. These are your reminder dates, not the game's demolition timer.");
+        var echoVisit = System.PluginConfig.EchoVisitRecorded;
+        if (ImGui.Checkbox("Echo when an interior visit is recorded", ref echoVisit)) { System.PluginConfig.EchoVisitRecorded = echoVisit; System.PluginConfig.Save(); }
+        if (ImGui.Button("Export houses and visits")) {
+          try {
+            var directory = Config.ConfigDirectory;
+            global::System.IO.Directory.CreateDirectory(directory);
+            var path = global::System.IO.Path.Combine(directory, $"housing-backup-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            global::System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(System.PluginConfig.PlayerConfigs, Newtonsoft.Json.Formatting.Indented));
+            Svc.Chat.Print($"Housing backup saved: {path}");
+          } catch (Exception ex) { Svc.Log.Error(ex, "Housing backup failed"); }
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("Open backup folder")) Dalamud.Utility.Util.OpenLink(Config.ConfigDirectory);
+        ImGui.TextWrapped("Export contains all saved characters, house addresses and visit dates. Move the JSON backup to your new PC; it contains character names and home worlds.");
+        ImGui.InputText("Backup JSON path", ref backupImportPath, 1024);
+        if (ImGui.Button("Import houses and visits (merge)")) {
+          try {
+            var file = new global::System.IO.FileInfo(backupImportPath.Trim().Trim('"'));
+            if (!file.Exists || file.Length > 5 * 1024 * 1024) throw new InvalidOperationException("Select an existing backup JSON smaller than 5 MB.");
+            var entries = Newtonsoft.Json.JsonConvert.DeserializeObject<global::System.Collections.Generic.List<PerPlayerConfig>>(
+              global::System.IO.File.ReadAllText(file.FullName)) ?? throw new InvalidOperationException("Invalid backup.");
+            if (entries.Count > 1000 || entries.Any(entry => entry is null || entry.PlayerID is null || entry.PrivateEstate is null || entry.FreeCompanyEstate is null))
+              throw new InvalidOperationException("Backup contains invalid character records.");
+            var added = 0;
+            foreach (var entry in entries) {
+              var existing = System.PluginConfig.PlayerConfigs.FirstOrDefault(player => player.PlayerID == entry.PlayerID);
+              if (existing is null) { System.PluginConfig.PlayerConfigs.Add(entry); added++; }
+              else {
+                foreach (var pair in new[] { (Current: existing.PrivateEstate, Imported: entry.PrivateEstate), (Current: existing.FreeCompanyEstate, Imported: entry.FreeCompanyEstate) }) {
+                  if (!pair.Imported.IsValid) continue;
+                  if (!pair.Current.IsValid) {
+                    pair.Current.District = pair.Imported.District; pair.Current.Ward = pair.Imported.Ward;
+                    pair.Current.Plot = pair.Imported.Plot; pair.Current.Enabled = pair.Imported.Enabled;
+                    pair.Current.LastVisit = pair.Imported.LastVisit;
+                  } else if (pair.Current.District == pair.Imported.District && pair.Current.Ward == pair.Imported.Ward && pair.Current.Plot == pair.Imported.Plot)
+                    pair.Current.LastVisit = Math.Max(pair.Current.LastVisit, pair.Imported.LastVisit);
+                }
+              }
+            }
+            System.PluginConfig.Save();
+            backupStatus = $"Imported {added} new character(s). Matching addresses keep the latest visit. Conflicting existing addresses are preserved.";
+          } catch (Exception ex) { backupStatus = $"Import failed: {ex.Message}"; Svc.Log.Error(ex, "Housing backup import failed"); }
+        }
+        if (!string.IsNullOrEmpty(backupStatus)) ImGui.TextWrapped(backupStatus);
         var enableFc = System.PluginConfig.EnableFcReminders;
         if (ImGui.Checkbox("Enable FC estate reminders", ref enableFc)) {
           System.PluginConfig.EnableFcReminders = enableFc;
@@ -372,7 +423,7 @@ public class SettingsUI : Window, IDisposable {
 
     ImGuiRaii.VerticalSeparator();
 
-    if (ImGui.Button("Reset Warnings")) {
+    if (ImGui.Button("Show dismissed reminders again")) {
       Plugin.CheckTimers();
       System.PluginConfig.ResetAll();
     }
