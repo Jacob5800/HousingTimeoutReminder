@@ -45,7 +45,8 @@ public class Plugin : IDalamudPlugin {
   /// The Dalamud Plugin constructor
   /// </summary>
   /// <param name="pluginInterface">Argument passed by Dalamud</param>
-  public Plugin(IDalamudPluginInterface pluginInterface) {
+  public Plugin(IDalamudPluginInterface pluginInterface, IPlayerState playerState) {
+    System.PlayerState = playerState;
     System.PluginInstance = this;
 
     ECommons.ECommonsMain.Init(pluginInterface, System.PluginInstance);
@@ -98,18 +99,7 @@ public class Plugin : IDalamudPlugin {
   }
   private void OnFrameworkUpdate(IFramework framework) {
     housingBar.Shown = System.PluginConfig.ShowServerBar;
-    if (Svc.Objects.LocalPlayer is not null) {
-      //Task.Run(() => {
-      if (Svc.Objects.LocalPlayer is IPlayerCharacter player) {
-        var temp = new PlayerID(player);
-        if (System.CachedCurrentPlayerId != temp) {
-          System.CachedCurrentPlayerId = temp;
-        }
-      }
-      //}).ContinueWith((Task task) => {
-      //  Svc.Log.Error(task.Exception, "Error when trying to get current player ID.");
-      //});
-    }
+    System.CachedCurrentPlayerId = System.GetAuthoritativePlayerID();
     if (System.IsLoggedIn && System.GetCurrentPlayerID() is not null &&
         Environment.TickCount64 >= nextHousingCheck && ECommons.GenericHelpers.IsScreenReady()) {
       nextHousingCheck = Environment.TickCount64 + 5000;

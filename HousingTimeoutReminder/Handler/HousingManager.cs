@@ -132,8 +132,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
 
   /// <summary>Read only the logged-in character's owned properties, never the house being visited.</summary>
   internal static unsafe int DetectOwnedHousing(bool refreshExisting = false) {
-    if (!System.IsLoggedIn || Svc.Objects.LocalPlayer is not { } player) return 0;
-    var playerId = new PlayerID(player);
+    if (System.GetCurrentPlayerID() is not { } playerId) return 0;
     System.CachedCurrentPlayerId = playerId;
     var knownCharacter = Config.PlayerConfiguration is not null;
     var config = Config.GetPlayerConfig(playerId);
@@ -146,7 +145,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
       };
       // HouseId is a packed eight-byte value documented by FFXIVClientStructs.
       var raw = CSHousingManager.GetOwnedHouseId(estateType).Id;
-      if (!TryDecodeOwnedHouse(raw, player.HomeWorld.RowId, type, out var district, out var ward, out var plot, out var room)) continue;
+      if (!TryDecodeOwnedHouse(raw, playerId.HomeWorld ?? 0, type, out var district, out var ward, out var plot, out var room)) continue;
       detected++;
       var property = config.GetOfType(type);
       if (property is HousingPlot { RemovedFromOverview: true }) continue;
@@ -198,7 +197,8 @@ public sealed class HousingManager: IEquatable<HousingManager> {
   /// <param name="type">The type of house to manage.</param>
   /// <returns>A new instance of a <see cref="HousingManager" />.</returns>
   public static HousingManager? From(PlayerID playerID, HousingType type) {
-    var playerConfig = Config.GetPlayerConfig(playerID);
+    var playerConfig = System.PluginConfig.PlayerConfigs.Find(config => config.PlayerID == playerID);
+    if (playerConfig is null) return null;
 
     return type switch {
       HousingType.FreeCompanyEstate when playerConfig.FreeCompanyEstate is IWardProperty fcHousingPlot =>
@@ -236,3 +236,4 @@ public sealed class HousingManager: IEquatable<HousingManager> {
     return HashCode.Combine((int)this.Room, (int)this.Plot, (int)this.Ward, (int)this.District);
   }
 }
+

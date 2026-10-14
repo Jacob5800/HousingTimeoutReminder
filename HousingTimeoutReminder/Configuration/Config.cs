@@ -143,6 +143,8 @@ public class Config : IPluginConfiguration {
   /// <returns>Returns the same new player config, else returns null if
   /// the player is not logged in.</returns>
   internal static PerPlayerConfig AddNewPlayerConfig(PlayerID playerID) {
+    if (System.GetAuthoritativePlayerID() is not { } current || current != playerID)
+      throw new InvalidOperationException("Only the verified logged-in character can be added automatically.");
     var legacy = System.PluginConfig.PlayerConfigs.FirstOrDefault(x => x.PlayerID is { HomeWorld: null } oldId && oldId.FirstLastName == playerID.FirstLastName);
     if (legacy is not null) {
       legacy.PlayerID = playerID;

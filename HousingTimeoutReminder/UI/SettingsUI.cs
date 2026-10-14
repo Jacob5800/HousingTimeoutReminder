@@ -20,6 +20,7 @@ namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.UI;
 /// The class for the settings of the plugin.
 /// </summary>
 public class SettingsUI : Window, IDisposable {
+  private PerPlayerConfig? pendingCharacterRemoval;
   private HousingPlot? pendingOverviewRemoval;
   private string pendingOverviewRemovalName = string.Empty;
   private HousingPlot? pendingTrackingRemoval;
@@ -413,6 +414,7 @@ public class SettingsUI : Window, IDisposable {
             if (header.Success) {
               ImGui.Indent(ScaledIndent5);
               DrawUserTimeoutSettings(config, ScaledIndent5);
+              if (ImGui.Button("Remove saved character")) pendingCharacterRemoval = config;
               ImGui.Indent(-ScaledIndent5);
             }
           }
@@ -428,6 +430,20 @@ public class SettingsUI : Window, IDisposable {
 
   /// <inheritdoc />
   public override void Draw() {
+    if (pendingCharacterRemoval is not null) ImGui.OpenPopup("Remove saved character?");
+    if (ImGui.BeginPopupModal("Remove saved character?", ImGuiWindowFlags.AlwaysAutoResize)) {
+      ImGui.TextWrapped(pendingCharacterRemoval?.DisplayName ?? string.Empty);
+      ImGui.TextWrapped("Delete this character's saved houses and reminders? Visit history is kept. This cannot be undone without a backup.");
+      if (ImGui.Button("Remove saved character")) {
+        if (pendingCharacterRemoval is not null) System.PluginConfig.PlayerConfigs.Remove(pendingCharacterRemoval);
+        System.PluginConfig.Save();
+        pendingCharacterRemoval = null;
+        ImGui.CloseCurrentPopup();
+      }
+      ImGui.SameLine();
+      if (ImGui.Button("Cancel")) { pendingCharacterRemoval = null; ImGui.CloseCurrentPopup(); }
+      ImGui.EndPopup();
+    }
     if (pendingOverviewRemoval is not null) ImGui.OpenPopup("Remove house from overview?");
     if (ImGui.BeginPopupModal("Remove house from overview?", ImGuiWindowFlags.AlwaysAutoResize)) {
       ImGui.TextWrapped(pendingOverviewRemovalName);
@@ -488,7 +504,7 @@ public class SettingsUI : Window, IDisposable {
               foreach (var player in System.PluginConfig.PlayerConfigs)
                 foreach (var entry in new[] { (House: player.PrivateEstate, Fc: false), (House: player.FreeCompanyEstate, Fc: true) }) {
                   var house = entry.House;
-                  if (house.RemovedFromOverview) continue;
+                  if (house.RemovedFromOverview || !house.IsValid) continue;
                   var status = !house.IsValid ? "Not detected: log in on this character and enter its estate." : !house.Enabled ? "Reminders disabled" :
                     entry.Fc && !System.PluginConfig.EnableFcReminders ? "FC reminders disabled globally" : entry.Fc && player.FcEstateAccess == false ? "FC rank lacks estate access" :
                     entry.Fc && player.FcEstateAccess is null ? "FC access unknown: log in to check" : house.LastVisit == 0 ? "No interior visit recorded" :

@@ -101,6 +101,13 @@ public static class System {
     return GetSheetAtRow<World>(homeWorld.Value)?.Name.ExtractText();
   }
 
+  internal static Dalamud.Plugin.Services.IPlayerState PlayerState { get; set; }
+  internal static PlayerID? GetAuthoritativePlayerID() {
+    if (!IsLoggedIn || PlayerState is null || !PlayerState.IsLoaded || PlayerState.ContentId == 0 || PlayerState.HomeWorld.RowId == 0) return null;
+    var parts = PlayerState.CharacterName.Split(' ', 2, global::System.StringSplitOptions.RemoveEmptyEntries);
+    return parts.Length == 2 ? new PlayerID(parts[0], parts[1], PlayerState.HomeWorld.RowId) : null;
+  }
+
   internal static PlayerID? CachedCurrentPlayerId { get; set; }
 
   /// <summary>Gets the current player name of the logged in character.</summary>
@@ -115,9 +122,7 @@ public static class System {
   /// <returns>The current player identification information.
   /// If the player does not exist or is not logged in it returns null.</returns>
   internal static PlayerID? GetCurrentPlayerID() {
-    if (CachedCurrentPlayerId is not null && IsLoggedIn)
-      return CachedCurrentPlayerId;
-    return null;
+    return GetAuthoritativePlayerID();
   }
 
   /// <summary>
@@ -125,3 +130,4 @@ public static class System {
   /// </summary>
   public static bool IsLoggedIn => Svc.ClientState.IsLoggedIn;
 }
+

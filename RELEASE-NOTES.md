@@ -1,5 +1,7 @@
-## 1.0.5.11
+## 1.0.5.12
 
+- Automatic character creation requires the verified logged-in identity; read-only house lookups no longer create character records.
+- Saved characters can be removed with confirmation to clean up unwanted entries.
 
-- Added Remove from overview with confirmation for individual personal or FC houses. Deletes the saved address and visit timestamp, disables reminders, and keeps the house hidden until restored in character settings. Visit history is retained.
-
+- Saved character identity now comes from the logged-in player state instead of the object table.
+- House overview only shows detected houses, excluding empty Unknown/ward 0/plot 0 entries.

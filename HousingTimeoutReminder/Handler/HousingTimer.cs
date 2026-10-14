@@ -31,6 +31,7 @@ public static class HousingTimer {
   /// <return>Returns <see langword="true"/> if successful.</return>
   public static bool CheckLocation(PlayerID playerID, uint territory) {
     try {
+      if (System.GetAuthoritativePlayerID() is not { } current || current != playerID) return false;
       var playerConfig = Config.GetPlayerConfig(playerID);
       var loc = HousingManager.GetCurrentLocation(territory);
       if (loc?.IsInside != true) lastConfirmedVisit = null;
