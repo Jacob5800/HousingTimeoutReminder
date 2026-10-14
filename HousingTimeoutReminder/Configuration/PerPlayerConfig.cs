@@ -76,7 +76,9 @@ public class PerPlayerConfig : IInterface {
   /// </summary>
   public void ResetWarnings() {
     this.FreeCompanyEstate.IsDismissed = false;
+    this.FreeCompanyEstate.NextReminderAt = this.FreeCompanyEstate.SnoozedUntil = 0;
     this.PrivateEstate.IsDismissed = false;
+    this.PrivateEstate.NextReminderAt = this.PrivateEstate.SnoozedUntil = 0;
   }
 
   /// <summary>

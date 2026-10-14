@@ -14,6 +14,8 @@ public abstract class WardProperty : IWardProperty {
   public virtual sbyte Plot { get; set; }
 
   /// <inheritdoc />
+  public long SnoozedUntil { get; set; }
+  public long NextReminderAt { get; set; }
   public virtual bool Enabled { get; set; }
 
   /// <inheritdoc />
@@ -38,5 +40,5 @@ public abstract class WardProperty : IWardProperty {
   /// Gets a <see langword="bool" /> that determines if the player is late to visiting their house.
   /// </summary>
   [JsonIgnore]
-  public bool IsLate => this.IsValid && this.Enabled && !this.IsDismissed && DateTimeOffset.Now.ToUnixTimeSeconds() - this.LastVisit > System.PluginConfig.DateToWaitSeconds;
+  public bool IsLate => this.IsValid && this.Enabled && !this.IsDismissed && DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Math.Max(SnoozedUntil, NextReminderAt) && DateTimeOffset.Now.ToUnixTimeSeconds() - this.LastVisit > System.PluginConfig.DateToWaitSeconds;
 }

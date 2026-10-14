@@ -60,6 +60,21 @@ public class Config : IPluginConfiguration {
   /// Shows warnings for all players regardless of who is logged in.
   /// </summary>
   public bool ShowAllPlayers { get; set; } = true;
+  public int ReminderRepeatHours { get; set; } = 24;
+  public int SnoozeHours { get; set; } = 24;
+  public List<VisitRecord> VisitHistory { get; set; } = [];
+  public sealed class VisitRecord {
+    public string Character { get; set; } = string.Empty;
+    public string House { get; set; } = string.Empty;
+    public long RecordedAt { get; set; }
+  }
+  public int DateFormat { get; set; }
+  public static string FormatVisitDate(DateTimeOffset date) => date.ToLocalTime().ToString(
+    System.PluginConfig.DateFormat switch {
+      1 => "MM/dd/yyyy HH:mm:ss",
+      2 => "yyyy-MM-dd HH:mm:ss",
+      _ => "dd/MM/yyyy HH:mm:ss"
+    }, global::System.Globalization.CultureInfo.InvariantCulture);
   public bool ShowServerBar { get; set; }
   public bool ColorServerBarUrgency { get; set; }
   public bool EchoVisitRecorded { get; set; } = true;

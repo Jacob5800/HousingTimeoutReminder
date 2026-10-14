@@ -145,7 +145,7 @@ public class Plugin : IDalamudPlugin {
     if (config.ColorServerBarUrgency && remaining.TotalDays <= 3) label.AddUiForegroundOff();
     housingBar.Text = label.Build();
     housingBar.Tooltip = $"Next visit reminder: {next.Player.DisplayName}\n{next.Kind}: {next.House.District}, ward {next.House.Ward}, plot {next.House.Plot}\n" +
-      (next.House.LastVisit == 0 ? "No interior visit recorded." : $"Last interior visit: {DateTimeOffset.FromUnixTimeSeconds(next.House.LastVisit).ToLocalTime():g}\n" +
+      (next.House.LastVisit == 0 ? "No interior visit recorded." : $"Last interior visit: {Config.FormatVisitDate(DateTimeOffset.FromUnixTimeSeconds(next.House.LastVisit))}\n" +
       (remaining <= TimeSpan.Zero ? "Visit reminder due now." : $"Reminder due in {Math.Ceiling(remaining.TotalDays)} day(s).")) +
       "\nBased on saved visits and your reminder interval, not Square Enix's demolition timer. Click to open.";
   }

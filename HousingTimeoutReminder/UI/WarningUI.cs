@@ -138,9 +138,16 @@ public class WarningUI : Window, IDisposable {
   /// <param name="playerConfig">An instance of a <see cref="PerPlayerConfig" />.</param>
   public void DisplayForPlayer(HousingType type, PerPlayerConfig playerConfig) {
     var property = playerConfig.GetOfType(type);
+    if (property is WardProperty reminder) {
+      if (ImGui.Button($"Snooze {System.PluginConfig.SnoozeHours} hours")) {
+        reminder.SnoozedUntil = DateTimeOffset.UtcNow.AddHours(Math.Clamp(System.PluginConfig.SnoozeHours, 1, 168)).ToUnixTimeSeconds();
+        System.PluginConfig.Save(); Pagination.WrapPages(); return;
+      }
+    }
     if (property.LastVisit <= 0) {
       if (this.DisplayText($"No visit has been recorded for the {HousingTypeEnumHelper.GetDescriptor(type)} of {playerConfig.DisplayName}. Enter the property on that character to record a visit.")) {
-        if (property is WardProperty wardProperty) wardProperty.IsDismissed = true;
+        if (property is WardProperty wardProperty) wardProperty.NextReminderAt = DateTimeOffset.UtcNow.AddHours(System.PluginConfig.ReminderRepeatHours).ToUnixTimeSeconds();
+        System.PluginConfig.Save();
         this.Pagination.WrapPages();
       }
       return;
@@ -154,7 +161,8 @@ public class WarningUI : Window, IDisposable {
         dateTimeOffsetLast = DateTimeOffset.FromUnixTimeSeconds(playerConfig.FreeCompanyEstate.LastVisit);
         pastDays = (int)dateTimeOffset.Subtract(dateTimeOffsetLast).TotalDays;
         if (this.DisplayText($"The Free Company Estate of {playerConfig.DisplayName} has not been visited in, {pastDays} days.")) {
-          playerConfig.FreeCompanyEstate.IsDismissed = true;
+          playerConfig.FreeCompanyEstate.NextReminderAt = DateTimeOffset.UtcNow.AddHours(System.PluginConfig.ReminderRepeatHours).ToUnixTimeSeconds();
+          System.PluginConfig.Save();
           this.Pagination.WrapPages();
         }
 
@@ -163,7 +171,8 @@ public class WarningUI : Window, IDisposable {
         dateTimeOffsetLast = DateTimeOffset.FromUnixTimeSeconds(playerConfig.PrivateEstate.LastVisit);
         pastDays = (int)dateTimeOffset.Subtract(dateTimeOffsetLast).TotalDays;
         if (this.DisplayText($"The Private Estate of {playerConfig.DisplayName} has not been visited in, {pastDays} days.")) {
-          playerConfig.PrivateEstate.IsDismissed = true;
+          playerConfig.PrivateEstate.NextReminderAt = DateTimeOffset.UtcNow.AddHours(System.PluginConfig.ReminderRepeatHours).ToUnixTimeSeconds();
+          System.PluginConfig.Save();
           this.Pagination.WrapPages();
         }
 

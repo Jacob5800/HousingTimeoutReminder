@@ -109,11 +109,11 @@ public class SettingsUI : Window, IDisposable {
     }
 
     if (lastStamp <= nextStamp && nextStamp >= ShortenFunction(playerConfig, type, now: true)) {
-      return (Last: $"{lastStamp:yyyy-MM-dd HH:mm:ss}", Next: $"{nextStamp:yyyy-MM-dd HH:mm:ss}");
+      return (Last: Config.FormatVisitDate(lastStamp), Next: Config.FormatVisitDate(nextStamp));
     }
 
     if (nextStamp <= ShortenFunction(playerConfig, type, now: true)) {
-      return (Last: $"{lastStamp:yyyy-MM-dd HH:mm:ss}", Next: "Now");
+      return (Last: Config.FormatVisitDate(lastStamp), Next: "Now");
     }
 
     return (Last: "Never", Next: "Now");
@@ -250,6 +250,17 @@ public class SettingsUI : Window, IDisposable {
         if (ImGui.Checkbox("Show reminders for all saved characters##GlobalShowAllPlayers", ref displayAllPlayers)) {
           System.PluginConfig.ShowAllPlayers = displayAllPlayers;
         }
+        var repeatHours = System.PluginConfig.ReminderRepeatHours;
+        if (ImGui.InputInt("Repeat dismissed reminders after (hours)", ref repeatHours)) { System.PluginConfig.ReminderRepeatHours = Math.Clamp(repeatHours, 1, 168); System.PluginConfig.Save(); }
+        var snoozeHours = System.PluginConfig.SnoozeHours;
+        if (ImGui.InputInt("Snooze duration (hours)", ref snoozeHours)) { System.PluginConfig.SnoozeHours = Math.Clamp(snoozeHours, 1, 168); System.PluginConfig.Save(); }
+        var dateFormat = System.PluginConfig.DateFormat;
+        ImGui.SetNextItemWidth(240);
+        if (ImGui.Combo("Date format", ref dateFormat, "Day / Month / Year\0Month / Day / Year\0Year / Month / Day\0")) {
+          System.PluginConfig.DateFormat = dateFormat;
+          System.PluginConfig.Save();
+        }
+        ImGui.TextDisabled($"Example: {Config.FormatVisitDate(DateTimeOffset.Now)} (local time)");
         var showBar = System.PluginConfig.ShowServerBar;
         if (ImGui.Checkbox("Show HT server-bar button", ref showBar)) { System.PluginConfig.ShowServerBar = showBar; System.PluginConfig.Save(); }
         var colorBar = System.PluginConfig.ColorServerBarUrgency;
@@ -377,6 +388,7 @@ public class SettingsUI : Window, IDisposable {
 
   /// <inheritdoc />
   public override void Draw() {
+    if (DiscordJoinButton.Draw()) Dalamud.Utility.Util.OpenLink("https://discord.gg/TTPZ82xaUd");
     using (var tabBar = ImRaii.TabBar("ConfigTabs")) {
       if (tabBar.Success) {
         if (System.IsLoggedIn) {
@@ -392,9 +404,46 @@ public class SettingsUI : Window, IDisposable {
             ImGui.Text("Failed to draw other players settings tab.");
           }
         }
+        using (var overview = ImRaii.TabItem("House overview")) {
+          if (overview.Success) {
+            ImGui.TextWrapped("All saved houses. Ages and reminders use recorded interior visits; they are not the game's demolition countdown.");
+            if (ImGui.BeginTable("HouseOverview", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 320))) {
+              foreach (var title in new[] { "Character / server", "House", "Last interior visit", "Days since visit", "Tracking status" }) ImGui.TableSetupColumn(title);
+              ImGui.TableHeadersRow();
+              foreach (var player in System.PluginConfig.PlayerConfigs)
+                foreach (var entry in new[] { (House: player.PrivateEstate, Fc: false), (House: player.FreeCompanyEstate, Fc: true) }) {
+                  var house = entry.House;
+                  var status = !house.IsValid ? "Not detected: log in on this character and enter its estate." : !house.Enabled ? "Reminders disabled" :
+                    entry.Fc && !System.PluginConfig.EnableFcReminders ? "FC reminders disabled globally" : entry.Fc && player.FcEstateAccess == false ? "FC rank lacks estate access" :
+                    entry.Fc && player.FcEstateAccess is null ? "FC access unknown: log in to check" : house.LastVisit == 0 ? "No interior visit recorded" :
+                    house.SnoozedUntil > DateTimeOffset.UtcNow.ToUnixTimeSeconds() ? "Snoozed" : "Tracking";
+                  ImGui.TableNextRow();
+                  ImGui.TableNextColumn(); ImGui.TextWrapped(player.DisplayName);
+                  ImGui.TableNextColumn(); ImGui.TextWrapped($"{(entry.Fc ? "FC" : "Personal")}: {house.District}, ward {house.Ward}, plot {house.Plot}");
+                  ImGui.TableNextColumn(); ImGui.TextWrapped(house.LastVisit > 0 ? Config.FormatVisitDate(DateTimeOffset.FromUnixTimeSeconds(house.LastVisit)) : "Never recorded");
+                  ImGui.TableNextColumn(); ImGui.TextUnformatted(house.LastVisit > 0 ? Math.Max(0, (DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(house.LastVisit)).TotalDays).ToString("0.0") : "—");
+                  ImGui.TableNextColumn(); ImGui.TextWrapped(status);
+                }
+              ImGui.EndTable();
+            }
+          }
+        }
+        using (var history = ImRaii.TabItem("Visit history")) {
+          if (history.Success) {
+            ImGui.TextWrapped("Up to 500 recorded visit confirmations. Older visits before this feature are not reconstructed.");
+            if (ImGui.BeginChild("VisitHistory", new Vector2(0, 320))) {
+              foreach (var visit in System.PluginConfig.VisitHistory.OrderByDescending(entry => entry.RecordedAt))
+                ImGui.TextWrapped($"{Config.FormatVisitDate(DateTimeOffset.FromUnixTimeSeconds(visit.RecordedAt))} · {visit.Character} · {visit.House}");
+            }
+            ImGui.EndChild();
+          }
+        }
         using (var tabItem = ImRaii.TabItem("Settings")) {
-          if (tabItem.Success && !DrawGlobalTab()) {
-            ImGui.Text("Failed to draw global settings tab.");
+          if (tabItem.Success) {
+            if (ImGui.BeginChild("GlobalSettingsScroll", new Vector2(0, 320))) {
+              if (!DrawGlobalTab()) ImGui.Text("Failed to draw global settings tab.");
+            }
+            ImGui.EndChild();
           }
         }
       }

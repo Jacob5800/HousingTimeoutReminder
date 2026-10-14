@@ -33,6 +33,7 @@ public static class HousingTimer {
     try {
       var playerConfig = Config.GetPlayerConfig(playerID);
       var loc = HousingManager.GetCurrentLocation(territory);
+      if (loc?.IsInside != true) lastConfirmedVisit = null;
       if (loc is null || !CanRecordVisit(System.GetCurrentPlayerID(), playerID, loc.IsInside, loc.IsApartment, loc.Room,
           Svc.Objects.LocalPlayer?.CurrentWorld.RowId ?? 0, playerID.HomeWorld ?? 0)) return true;
 
@@ -67,8 +68,12 @@ public static class HousingTimer {
   private static string? lastConfirmedVisit;
   private static void ConfirmVisit(PerPlayerConfig player, HousingPlot house, string kind) {
     var key = $"{player.DisplayName}:{kind}:{house.District}:{house.Ward}:{house.Plot}";
-    if (!System.PluginConfig.EchoVisitRecorded || lastConfirmedVisit == key) return;
+    if (lastConfirmedVisit == key) return;
     lastConfirmedVisit = key;
+    System.PluginConfig.VisitHistory.Add(new Config.VisitRecord { Character = player.DisplayName, House = $"{kind}, {house.District}, ward {house.Ward}, plot {house.Plot}", RecordedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds() });
+    if (System.PluginConfig.VisitHistory.Count > 500) System.PluginConfig.VisitHistory.RemoveRange(0, System.PluginConfig.VisitHistory.Count - 500);
+    System.PluginConfig.Save();
+    if (!System.PluginConfig.EchoVisitRecorded) return;
     Svc.Chat.Print(new Dalamud.Game.Text.XivChatEntry {
       Type = Dalamud.Game.Text.XivChatType.Echo,
       Message = new Dalamud.Game.Text.SeStringHandling.SeStringBuilder().AddText(
