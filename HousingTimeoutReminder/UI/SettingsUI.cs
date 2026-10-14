@@ -20,6 +20,8 @@ namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.UI;
 /// The class for the settings of the plugin.
 /// </summary>
 public class SettingsUI : Window, IDisposable {
+  private HousingPlot? pendingTrackingRemoval;
+  private string pendingTrackingRemovalName = string.Empty;
   private string backupImportPath = string.Empty;
   private string backupStatus = string.Empty;
   private global::System.Collections.Generic.List<PerPlayerConfig>? housingImportPreview;
@@ -258,6 +260,7 @@ public class SettingsUI : Window, IDisposable {
         ImGui.TextUnformatted("Snooze duration (hours)");
         ImGui.SetNextItemWidth(160);
         if (ImGui.InputInt("##SnoozeHours", ref snoozeHours)) { System.PluginConfig.SnoozeHours = Math.Clamp(snoozeHours, 1, 168); System.PluginConfig.Save(); }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Snooze hides reminders for the selected house for this many hours. It does not record a visit or change the demolition timer.");
         var dateFormat = System.PluginConfig.DateFormat;
         ImGui.SetNextItemWidth(240);
         if (ImGui.Combo("Date format", ref dateFormat, "Day / Month / Year\0Month / Day / Year\0Year / Month / Day\0")) {
@@ -415,6 +418,20 @@ public class SettingsUI : Window, IDisposable {
 
   /// <inheritdoc />
   public override void Draw() {
+    if (pendingTrackingRemoval is not null) ImGui.OpenPopup("Remove house from tracking?");
+    if (ImGui.BeginPopupModal("Remove house from tracking?", ImGuiWindowFlags.AlwaysAutoResize)) {
+      ImGui.TextWrapped(pendingTrackingRemovalName);
+      ImGui.TextWrapped("Stop tracking this house? Its address and recorded visits will be kept. Enable reminders again in character settings to resume tracking.");
+      if (ImGui.Button("Remove from tracking")) {
+        pendingTrackingRemoval!.Enabled = false;
+        System.PluginConfig.Save();
+        pendingTrackingRemoval = null;
+        ImGui.CloseCurrentPopup();
+      }
+      ImGui.SameLine();
+      if (ImGui.Button("Cancel")) { pendingTrackingRemoval = null; ImGui.CloseCurrentPopup(); }
+      ImGui.EndPopup();
+    }
     if (DiscordJoinButton.Draw()) Dalamud.Utility.Util.OpenLink("https://discord.gg/TTPZ82xaUd");
     using (var tabBar = ImRaii.TabBar("ConfigTabs")) {
       if (tabBar.Success) {
@@ -434,12 +451,13 @@ public class SettingsUI : Window, IDisposable {
         using (var overview = ImRaii.TabItem("House overview")) {
           if (overview.Success) {
             ImGui.TextWrapped("All saved houses. Ages and reminders use recorded interior visits; they are not the game's demolition countdown.");
-            if (ImGui.BeginTable("HouseOverview", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.ScrollX | ImGuiTableFlags.Resizable, new Vector2(0, Math.Max(200, ImGui.GetContentRegionAvail().Y - 100)))) {
+            if (ImGui.BeginTable("HouseOverview", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.ScrollX | ImGuiTableFlags.Resizable, new Vector2(0, Math.Max(200, ImGui.GetContentRegionAvail().Y - 100)))) {
               ImGui.TableSetupColumn("Character / server", ImGuiTableColumnFlags.WidthFixed, 180);
               ImGui.TableSetupColumn("House", ImGuiTableColumnFlags.WidthFixed, 180);
               ImGui.TableSetupColumn("Last interior visit", ImGuiTableColumnFlags.WidthFixed, 170);
               ImGui.TableSetupColumn("Days since visit", ImGuiTableColumnFlags.WidthFixed, 100);
               ImGui.TableSetupColumn("Tracking status", ImGuiTableColumnFlags.WidthStretch);
+              ImGui.TableSetupColumn("Action", ImGuiTableColumnFlags.WidthFixed, 150);
               ImGui.TableHeadersRow();
               foreach (var player in System.PluginConfig.PlayerConfigs)
                 foreach (var entry in new[] { (House: player.PrivateEstate, Fc: false), (House: player.FreeCompanyEstate, Fc: true) }) {
@@ -452,8 +470,17 @@ public class SettingsUI : Window, IDisposable {
                   ImGui.TableNextColumn(); ImGui.TextWrapped(player.DisplayName);
                   ImGui.TableNextColumn(); ImGui.TextWrapped($"{(entry.Fc ? "FC" : "Personal")}: {house.District}, ward {house.Ward}, plot {house.Plot}");
                   ImGui.TableNextColumn(); ImGui.TextWrapped(house.LastVisit > 0 ? Config.FormatVisitDate(DateTimeOffset.FromUnixTimeSeconds(house.LastVisit)) : "Never recorded");
-                  ImGui.TableNextColumn(); ImGui.TextUnformatted(house.LastVisit > 0 ? Math.Max(0, (DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(house.LastVisit)).TotalDays).ToString("0.0") : "—");
+                  ImGui.TableNextColumn(); ImGui.TextUnformatted(house.LastVisit > 0 ? Math.Floor(Math.Max(0, (DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(house.LastVisit)).TotalDays)).ToString("0") : "—");
                   ImGui.TableNextColumn(); ImGui.TextWrapped(status);
+                  ImGui.TableNextColumn();
+                  ImGui.PushID($"{player.DisplayName}-{entry.Fc}");
+                  ImGui.BeginDisabled(!house.Enabled);
+                  if (ImGui.Button("Remove from tracking")) {
+                    pendingTrackingRemoval = house;
+                    pendingTrackingRemovalName = $"{player.DisplayName}: {(entry.Fc ? "FC" : "Personal")} house, {house.District}, ward {house.Ward}, plot {house.Plot}";
+                  }
+                  ImGui.EndDisabled();
+                  ImGui.PopID();
                 }
               ImGui.EndTable();
             }

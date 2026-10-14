@@ -60,8 +60,8 @@ public class Config : IPluginConfiguration {
   /// Shows warnings for all players regardless of who is logged in.
   /// </summary>
   public bool ShowAllPlayers { get; set; } = true;
-  public int ReminderRepeatHours { get; set; } = 24;
-  public int SnoozeHours { get; set; } = 24;
+  public int ReminderRepeatHours { get; set; } = 1;
+  public int SnoozeHours { get; set; } = 1;
   public List<VisitRecord> VisitHistory { get; set; } = [];
   public sealed class VisitRecord {
     public string Character { get; set; } = string.Empty;
