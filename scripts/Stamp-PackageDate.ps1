@@ -2,6 +2,7 @@ param([Parameter(Mandatory=$true)][string]$PackageDirectory,[Parameter(Mandatory
 $ErrorActionPreference='Stop'
 $manifestPath=Join-Path $PackageDirectory "$InternalName.json"
 $manifest=Get-Content -LiteralPath $manifestPath -Raw|ConvertFrom-Json
+$manifest.Changelog = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'RELEASE-NOTES.md') -Raw
 $manifest|Add-Member -NotePropertyName LastUpdate -NotePropertyValue ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) -Force
 $manifest|ConvertTo-Json -Depth 20|Set-Content -LiteralPath $manifestPath -Encoding utf8
 Add-Type -AssemblyName System.IO.Compression.FileSystem
