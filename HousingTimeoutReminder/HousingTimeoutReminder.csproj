@@ -1,6 +1,6 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Authors>Neko Boi Nick</Authors>
+    <Authors>Jacob5800</Authors>
     <Company>$(Authors)</Company>
     <Description>Tracks registered FFXIV housing plots and reminds you before their auto-demolition timer expires.</Description>
     <PackageProjectUrl>https://github.com/Jacob5800/HousingTimeoutReminder</PackageProjectUrl>
@@ -33,7 +33,7 @@
 
   <PropertyGroup Label="Feature">
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <Version>1.0.5.6</Version>
+    <Version>1.0.5.7</Version>
   </PropertyGroup>
 
   <PropertyGroup>

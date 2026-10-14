@@ -28,8 +28,7 @@ public class SettingsUI : Window, IDisposable {
   /// We disable the scroll with mouse because we have it layed out to have
   /// fixed elements.
   /// </summary>
-  private const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar |
-    ImGuiWindowFlags.NoScrollWithMouse;
+  private const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.NoCollapse;
 
   /// <summary>
   /// The name of the window.
@@ -41,7 +40,7 @@ public class SettingsUI : Window, IDisposable {
   /// </summary>
   public SettingsUI() : base(Name, WindowFlags) {
     Size = ImGuiHelpers.ScaledVector2(630.0f, 550.0f);
-    SizeCondition = ImGuiCond.Always;
+    SizeCondition = ImGuiCond.FirstUseEver;
   }
 
   /// <summary>
@@ -252,9 +251,13 @@ public class SettingsUI : Window, IDisposable {
           System.PluginConfig.ShowAllPlayers = displayAllPlayers;
         }
         var repeatHours = System.PluginConfig.ReminderRepeatHours;
-        if (ImGui.InputInt("Repeat dismissed reminders after (hours)", ref repeatHours)) { System.PluginConfig.ReminderRepeatHours = Math.Clamp(repeatHours, 1, 168); System.PluginConfig.Save(); }
+        ImGui.TextUnformatted("Repeat dismissed reminders after (hours)");
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.InputInt("##RepeatHours", ref repeatHours)) { System.PluginConfig.ReminderRepeatHours = Math.Clamp(repeatHours, 1, 168); System.PluginConfig.Save(); }
         var snoozeHours = System.PluginConfig.SnoozeHours;
-        if (ImGui.InputInt("Snooze duration (hours)", ref snoozeHours)) { System.PluginConfig.SnoozeHours = Math.Clamp(snoozeHours, 1, 168); System.PluginConfig.Save(); }
+        ImGui.TextUnformatted("Snooze duration (hours)");
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.InputInt("##SnoozeHours", ref snoozeHours)) { System.PluginConfig.SnoozeHours = Math.Clamp(snoozeHours, 1, 168); System.PluginConfig.Save(); }
         var dateFormat = System.PluginConfig.DateFormat;
         ImGui.SetNextItemWidth(240);
         if (ImGui.Combo("Date format", ref dateFormat, "Day / Month / Year\0Month / Day / Year\0Year / Month / Day\0")) {
@@ -431,7 +434,7 @@ public class SettingsUI : Window, IDisposable {
         using (var overview = ImRaii.TabItem("House overview")) {
           if (overview.Success) {
             ImGui.TextWrapped("All saved houses. Ages and reminders use recorded interior visits; they are not the game's demolition countdown.");
-            if (ImGui.BeginTable("HouseOverview", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 320))) {
+            if (ImGui.BeginTable("HouseOverview", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, Math.Max(200, ImGui.GetContentRegionAvail().Y - 100)))) {
               foreach (var title in new[] { "Character / server", "House", "Last interior visit", "Days since visit", "Tracking status" }) ImGui.TableSetupColumn(title);
               ImGui.TableHeadersRow();
               foreach (var player in System.PluginConfig.PlayerConfigs)
@@ -455,7 +458,7 @@ public class SettingsUI : Window, IDisposable {
         using (var history = ImRaii.TabItem("Visit history")) {
           if (history.Success) {
             ImGui.TextWrapped("Up to 500 recorded visit confirmations. Older visits before this feature are not reconstructed.");
-            if (ImGui.BeginChild("VisitHistory", new Vector2(0, 320))) {
+            if (ImGui.BeginChild("VisitHistory", new Vector2(0, Math.Max(200, ImGui.GetContentRegionAvail().Y - 100)))) {
               foreach (var visit in System.PluginConfig.VisitHistory.OrderByDescending(entry => entry.RecordedAt))
                 ImGui.TextWrapped($"{Config.FormatVisitDate(DateTimeOffset.FromUnixTimeSeconds(visit.RecordedAt))} · {visit.Character} · {visit.House}");
             }
@@ -464,7 +467,7 @@ public class SettingsUI : Window, IDisposable {
         }
         using (var tabItem = ImRaii.TabItem("Settings")) {
           if (tabItem.Success) {
-            if (ImGui.BeginChild("GlobalSettingsScroll", new Vector2(0, 320))) {
+            if (ImGui.BeginChild("GlobalSettingsScroll", new Vector2(0, Math.Max(200, ImGui.GetContentRegionAvail().Y - 100)))) {
               if (!DrawGlobalTab()) ImGui.Text("Failed to draw global settings tab.");
             }
             ImGui.EndChild();
@@ -484,8 +487,8 @@ public class SettingsUI : Window, IDisposable {
       this.IsOpen = false;
     }
 
-    ImGuiRaii.VerticalSeparator();
-    ImGui.Text("Reposition");
+    ImGui.Separator();
+    ImGui.Text("Move reminder window");
     ImGui.SameLine();
 
     var isTesting = System.PluginInstance.Repositioning;
@@ -494,7 +497,7 @@ public class SettingsUI : Window, IDisposable {
       System.PluginInstance.Repositioning = isTesting;
     }
 
-    ImGuiRaii.VerticalSeparator();
+    ImGui.SameLine();
 
     if (ImGui.Button("Show dismissed reminders again")) {
       Plugin.CheckTimers();

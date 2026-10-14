@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5.7
+
+- Improved settings layout with compact hour inputs and labels above them, a resizable window, and content that uses available space.
+- Cleaned up reminder-window controls.
+- Dalamud author display now shows Jacob5800. Original author credits and license are preserved.
+
 ## 1.0.5.6
 
 - Added a housing import preview showing saved characters, addresses and visit dates before applying any changes. Import previewed houses and Cancel are separate actions.
