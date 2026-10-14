@@ -20,6 +20,8 @@ namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.UI;
 /// The class for the settings of the plugin.
 /// </summary>
 public class SettingsUI : Window, IDisposable {
+  private HousingPlot? pendingOverviewRemoval;
+  private string pendingOverviewRemovalName = string.Empty;
   private HousingPlot? pendingTrackingRemoval;
   private string pendingTrackingRemovalName = string.Empty;
   private string backupImportPath = string.Empty;
@@ -142,6 +144,14 @@ public class SettingsUI : Window, IDisposable {
     try {
       if (!ImGui.CollapsingHeader(HousingTypeEnumHelper.GetDescriptor(type), ImGuiTreeNodeFlags.DefaultOpen)) return true;
       var property = playerConfig.GetOfType(type);
+      if (property is HousingPlot { RemovedFromOverview: true } removedHouse) {
+        ImGui.TextWrapped("This house was removed from the overview.");
+        if (ImGui.Button("Restore to overview")) {
+          removedHouse.RemovedFromOverview = false;
+          System.PluginConfig.Save();
+        }
+        return true;
+      }
       if (type == HousingType.FreeCompanyEstate) {
         ImGui.TextWrapped(playerConfig.FcEstateAccess switch {
           true => $"FC rank: {playerConfig.FcRankName}. Estate access allowed.",
@@ -418,6 +428,22 @@ public class SettingsUI : Window, IDisposable {
 
   /// <inheritdoc />
   public override void Draw() {
+    if (pendingOverviewRemoval is not null) ImGui.OpenPopup("Remove house from overview?");
+    if (ImGui.BeginPopupModal("Remove house from overview?", ImGuiWindowFlags.AlwaysAutoResize)) {
+      ImGui.TextWrapped(pendingOverviewRemovalName);
+      ImGui.TextWrapped("Delete this house's saved address and visit timestamp and stop its reminders? Visit history is kept. The house stays hidden until restored in character settings.");
+      if (ImGui.Button("Remove from overview")) {
+        pendingOverviewRemoval!.Reset();
+        pendingOverviewRemoval.NextReminderAt = pendingOverviewRemoval.SnoozedUntil = 0;
+        pendingOverviewRemoval.RemovedFromOverview = true;
+        System.PluginConfig.Save();
+        pendingOverviewRemoval = null;
+        ImGui.CloseCurrentPopup();
+      }
+      ImGui.SameLine();
+      if (ImGui.Button("Cancel")) { pendingOverviewRemoval = null; ImGui.CloseCurrentPopup(); }
+      ImGui.EndPopup();
+    }
     if (pendingTrackingRemoval is not null) ImGui.OpenPopup("Remove house from tracking?");
     if (ImGui.BeginPopupModal("Remove house from tracking?", ImGuiWindowFlags.AlwaysAutoResize)) {
       ImGui.TextWrapped(pendingTrackingRemovalName);
@@ -457,11 +483,12 @@ public class SettingsUI : Window, IDisposable {
               ImGui.TableSetupColumn("Last interior visit", ImGuiTableColumnFlags.WidthFixed, 170);
               ImGui.TableSetupColumn("Days since visit", ImGuiTableColumnFlags.WidthFixed, 100);
               ImGui.TableSetupColumn("Tracking status", ImGuiTableColumnFlags.WidthStretch);
-              ImGui.TableSetupColumn("Action", ImGuiTableColumnFlags.WidthFixed, 150);
+              ImGui.TableSetupColumn("Action", ImGuiTableColumnFlags.WidthFixed, 180);
               ImGui.TableHeadersRow();
               foreach (var player in System.PluginConfig.PlayerConfigs)
                 foreach (var entry in new[] { (House: player.PrivateEstate, Fc: false), (House: player.FreeCompanyEstate, Fc: true) }) {
                   var house = entry.House;
+                  if (house.RemovedFromOverview) continue;
                   var status = !house.IsValid ? "Not detected: log in on this character and enter its estate." : !house.Enabled ? "Reminders disabled" :
                     entry.Fc && !System.PluginConfig.EnableFcReminders ? "FC reminders disabled globally" : entry.Fc && player.FcEstateAccess == false ? "FC rank lacks estate access" :
                     entry.Fc && player.FcEstateAccess is null ? "FC access unknown: log in to check" : house.LastVisit == 0 ? "No interior visit recorded" :
@@ -480,6 +507,10 @@ public class SettingsUI : Window, IDisposable {
                     pendingTrackingRemovalName = $"{player.DisplayName}: {(entry.Fc ? "FC" : "Personal")} house, {house.District}, ward {house.Ward}, plot {house.Plot}";
                   }
                   ImGui.EndDisabled();
+                  if (ImGui.Button("Remove from overview")) {
+                    pendingOverviewRemoval = house;
+                    pendingOverviewRemovalName = $"{player.DisplayName}: {(entry.Fc ? "FC" : "Personal")} house, {house.District}, ward {house.Ward}, plot {house.Plot}";
+                  }
                   ImGui.PopID();
                 }
               ImGui.EndTable();

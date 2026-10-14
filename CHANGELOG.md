@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.5.10
+
+- Added Remove from overview with confirmation for individual personal or FC houses. Deletes the saved address and visit timestamp, disables reminders, and keeps the house hidden until restored in character settings. Visit history is retained.
+
 ## 1.0.5.9
 
 - House overview has a Remove from tracking button with confirmation showing the character and house. It stops reminders while keeping the address and visits; enable reminders in character settings to resume tracking.

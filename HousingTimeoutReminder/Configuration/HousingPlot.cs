@@ -14,6 +14,8 @@ namespace NekoBoiNick.FFXIV.DalamudPlugin.HousingTimeoutReminder.Configuration;
 /// </summary>
 [Serializable]
 public class HousingPlot : WardProperty {
+  public bool RemovedFromOverview { get; set; }
+
   /// <inheritdoc />
   public override short Room {
     get => 0;

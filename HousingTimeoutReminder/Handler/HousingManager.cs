@@ -149,6 +149,7 @@ public sealed class HousingManager: IEquatable<HousingManager> {
       if (!TryDecodeOwnedHouse(raw, player.HomeWorld.RowId, type, out var district, out var ward, out var plot, out var room)) continue;
       detected++;
       var property = config.GetOfType(type);
+      if (property is HousingPlot { RemovedFromOverview: true }) continue;
       if (property.IsValid && !refreshExisting && type == HousingType.PrivateEstate) continue;
       if (property.District == district && property.Ward == ward && property.Plot == plot && property.Room == room) continue;
       var wasConfigured = property.IsValid;
