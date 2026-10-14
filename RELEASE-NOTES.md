@@ -1,5 +1,4 @@
-## 1.0.5.7
+## 1.0.5.8
 
-- Improved settings layout with compact hour inputs and labels above them, a resizable window, and content that uses available space.
-- Cleaned up reminder-window controls.
-- Dalamud author display now shows Jacob5800. Original author credits and license are preserved.
+- House overview columns now have clearer starting widths, can be resized, and scroll horizontally when needed.
+- Replaced the awkward reposition controls with a labeled Move reminder window checkbox in the shared footer on every tab.

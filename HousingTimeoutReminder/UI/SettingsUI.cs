@@ -434,8 +434,12 @@ public class SettingsUI : Window, IDisposable {
         using (var overview = ImRaii.TabItem("House overview")) {
           if (overview.Success) {
             ImGui.TextWrapped("All saved houses. Ages and reminders use recorded interior visits; they are not the game's demolition countdown.");
-            if (ImGui.BeginTable("HouseOverview", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, Math.Max(200, ImGui.GetContentRegionAvail().Y - 100)))) {
-              foreach (var title in new[] { "Character / server", "House", "Last interior visit", "Days since visit", "Tracking status" }) ImGui.TableSetupColumn(title);
+            if (ImGui.BeginTable("HouseOverview", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.ScrollX | ImGuiTableFlags.Resizable, new Vector2(0, Math.Max(200, ImGui.GetContentRegionAvail().Y - 100)))) {
+              ImGui.TableSetupColumn("Character / server", ImGuiTableColumnFlags.WidthFixed, 180);
+              ImGui.TableSetupColumn("House", ImGuiTableColumnFlags.WidthFixed, 180);
+              ImGui.TableSetupColumn("Last interior visit", ImGuiTableColumnFlags.WidthFixed, 170);
+              ImGui.TableSetupColumn("Days since visit", ImGuiTableColumnFlags.WidthFixed, 100);
+              ImGui.TableSetupColumn("Tracking status", ImGuiTableColumnFlags.WidthStretch);
               ImGui.TableHeadersRow();
               foreach (var player in System.PluginConfig.PlayerConfigs)
                 foreach (var entry in new[] { (House: player.PrivateEstate, Fc: false), (House: player.FreeCompanyEstate, Fc: true) }) {
@@ -488,17 +492,8 @@ public class SettingsUI : Window, IDisposable {
     }
 
     ImGui.Separator();
-    ImGui.Text("Move reminder window");
-    ImGui.SameLine();
-
-    var isTesting = System.PluginInstance.Repositioning;
-
-    if (ImGui.Checkbox("##isTesting", ref isTesting)) {
-      System.PluginInstance.Repositioning = isTesting;
-    }
-
-    ImGui.SameLine();
-
+    var reposition = System.PluginInstance.Repositioning;
+    if (ImGui.Checkbox("Move reminder window", ref reposition)) System.PluginInstance.Repositioning = reposition;
     if (ImGui.Button("Show dismissed reminders again")) {
       Plugin.CheckTimers();
       System.PluginConfig.ResetAll();

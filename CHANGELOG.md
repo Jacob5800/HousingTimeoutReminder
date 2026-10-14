@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5.8
+
+- House overview columns now have clearer starting widths, can be resized, and scroll horizontally when needed.
+- Replaced the awkward reposition controls with a labeled Move reminder window checkbox in the shared footer on every tab.
+
 ## 1.0.5.7
 
 - Improved settings layout with compact hour inputs and labels above them, a resizable window, and content that uses available space.
