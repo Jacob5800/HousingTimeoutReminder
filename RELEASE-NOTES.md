@@ -1,7 +1,5 @@
-## 1.0.5.12
+## 1.0.5.13
 
-- Automatic character creation requires the verified logged-in identity; read-only house lookups no longer create character records.
-- Saved characters can be removed with confirmation to clean up unwanted entries.
+- Added a housing-themed icon beside the HT server-bar entry.
 
-- Saved character identity now comes from the logged-in player state instead of the object table.
-- House overview only shows detected houses, excluding empty Unknown/ward 0/plot 0 entries.
+# Changelog
