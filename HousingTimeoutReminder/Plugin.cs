@@ -122,7 +122,7 @@ public class Plugin : IDalamudPlugin {
     }).Where(entry => entry.Allowed && entry.House.Enabled && entry.House.IsValid)
       .OrderBy(entry => entry.House.LastVisit == 0 ? long.MinValue : HousingTimer.GetOffset(entry.House.LastVisit)).ToArray();
     if (houses.Length == 0) {
-      housingBar.Text = new SeStringBuilder().AddIcon(BitmapFontIcon.IslandSanctuary).AddText(" HT").Build();
+      housingBar.Text = new SeStringBuilder().AddIcon(BitmapFontIcon.Ishgard).AddText(" HT").Build();
       housingBar.Tooltip = "No enabled houses tracked. Click to open Housing Timeout Reminder.";
       return;
     }
@@ -131,7 +131,7 @@ public class Plugin : IDalamudPlugin {
     var remaining = due - DateTimeOffset.UtcNow;
     var label = new SeStringBuilder();
     if (config.ColorServerBarUrgency && remaining.TotalDays <= 3) label.AddUiForeground((ushort)(remaining <= TimeSpan.Zero ? 17 : 31));
-    label.AddIcon(BitmapFontIcon.IslandSanctuary).AddText(" HT");
+    label.AddIcon(BitmapFontIcon.Ishgard).AddText(" HT");
     if (config.ColorServerBarUrgency && remaining.TotalDays <= 3) label.AddUiForegroundOff();
     housingBar.Text = label.Build();
     housingBar.Tooltip = $"Next visit reminder: {next.Player.DisplayName}\n{next.Kind}: {next.House.District}, ward {next.House.Ward}, plot {next.House.Plot}\n" +
